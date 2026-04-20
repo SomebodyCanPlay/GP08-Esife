@@ -6,9 +6,9 @@ export const routes: Routes = [
     path: '', 
     loadComponent: () => import('./espectaculos/espectaculos').then(m => m.EspectaculosComponent) 
   },
-  // Cuando entres a "localhost:4200/compra", cargará la de compra
+  // Cuando entres a "localhost:4200/compra/1", cargará la de compra del evento 1
   { 
-    path: 'compra', 
+    path: 'compra/:id', 
     loadComponent: () => import('./compra/compra').then(m => m.CompraComponent) 
   },
   // Si alguien escribe una ruta que no existe, lo devuelve al inicio

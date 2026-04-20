@@ -1,1 +1,24 @@
-<p>espectaculos works!</p>
+<div class="search-container">
+  <h2>Buscador de Espectáculos</h2>
+  <div class="search-box">
+    <input 
+      type="text" 
+      [(ngModel)]="terminoBusqueda" 
+      (keyup.enter)="buscar()"
+      placeholder="Introduce el nombre del artista (ej: Natos y Waor, Radiohead)" 
+    />
+    <button (click)="buscar()">Buscar</button>
+  </div>
+
+  <div *ngIf="mensajeError" class="error-msg">
+    {{ mensajeError }}
+  </div>
+
+  <div class="results-grid" *ngIf="espectaculos.length > 0">
+    <div class="card" *ngFor="let esp of espectaculos">
+      <h3>{{ esp.artista }}</h3>
+      <p>Fecha: {{ esp.fecha | date:'dd/MM/yyyy HH:mm' }}</p>
+      <button [routerLink]="['/compra', esp.id]">Ver Entradas</button>
+    </div>
+  </div>
+</div>

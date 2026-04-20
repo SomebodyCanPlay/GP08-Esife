@@ -1,1 +1,46 @@
-<p>compra works!</p>
+<div class="compra-container">
+  <h2>Ubicaciones y Entradas</h2>
+
+  <div *ngIf="mensajeError" class="error-msg">
+    {{ mensajeError }}
+  </div>
+
+  <!-- Resumen del Profesor (Punto 3) -->
+  <div class="resumen-box" *ngIf="resumen">
+    <h3>Resumen de Disponibilidad</h3>
+    <div class="stats">
+      <span>Total: <b>{{ resumen.total }}</b></span>
+      <span class="libres">Libres: <b>{{ resumen.libres }}</b></span>
+      <span class="reservadas">Reservadas: <b>{{ resumen.reservadas }}</b></span>
+      <span class="vendidas">Vendidas: <b>{{ resumen.vendidas }}</b></span>
+    </div>
+  </div>
+
+  <!-- Listado de Entradas Distinguiendo el Polimorfismo -->
+  <div class="entradas-grid" *ngIf="entradas && entradas.length > 0">
+    <div class="entrada-card" *ngFor="let ent of entradas" [ngClass]="ent.estado ? ent.estado.toLowerCase() : ''">
+
+      <!-- Entrada Precisa -->
+      <div *ngIf="ent.tipo === 'Precisa' || ent.tipo === 'precisa'">
+        <h4>Butaca Precisa</h4>
+        <p>Planta: {{ ent.planta }} | Fila: {{ ent.fila }} | Col: {{ ent.columna }}</p>
+      </div>
+
+      <!-- Entrada DeZona -->
+      <div *ngIf="ent.tipo === 'DeZona' || ent.tipo === 'dezona'">
+        <h4>Entrada de Zona</h4>
+        <p>Zona Asignada: {{ ent.zona }}</p>
+      </div>
+
+      <p class="precio">{{ ent.precio / 100 | currency:'EUR':'symbol' }}</p>
+      <p class="estado-label">Estado: {{ ent.estado }}</p>
+
+      <button *ngIf="ent.estado === 'DISPONIBLE'" (click)="null">
+        Pre-Reservar
+      </button>
+      <button *ngIf="ent.estado !== 'DISPONIBLE'" disabled>
+        No Disponible
+      </button>
+    </div>
+  </div>
+</div>
