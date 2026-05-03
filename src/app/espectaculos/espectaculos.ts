@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -11,6 +11,14 @@ export interface Espectaculo {
   escenario: any;
 }
 
+export interface Escenario {
+  id: number;
+  nombre: string;
+  descripcion: string;
+  espectaculos?: Espectaculo[]; // Array for UI accordion
+  expanded?: boolean; // UI State
+}
+
 @Component({
   selector: 'app-espectaculos',
   standalone: true,
@@ -21,12 +29,15 @@ export interface Espectaculo {
 export class EspectaculosComponent implements OnInit {
   terminoBusqueda: string = '';
   espectaculos: Espectaculo[] = [];
+  escenarios: Escenario[] = [];
+  
   mensajeError: string = '';
   enCola: boolean = true;
   posicionCola: number = 0;
   sessionId: string = '';
+  mostrarEscenarios: boolean = false; // Controla si se ven los acordeones
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private cdRef: ChangeDetectorRef) {}
 
   ngOnInit() {
     if (typeof window !== 'undefined' && window.sessionStorage) {
@@ -52,24 +63,71 @@ export class EspectaculosComponent implements OnInit {
           // Re-intentar en 5 segundos
           setTimeout(() => this.comprobarCola(), 5000);
         }
+        this.cdRef.detectChanges();
       },
-      error: () => this.mensajeError = "Error conectando con la taquilla."
+      error: () => {
+        this.mensajeError = "Error conectando con la taquilla.";
+        this.cdRef.detectChanges();
+      }
     });
+  }
+
+  verConciertos() {
+    this.mostrarEscenarios = true;
+    this.cargarEscenarios();
+    this.cdRef.detectChanges();
+  }
+
+  cargarEscenarios() {
+    this.http.get<Escenario[]>(`http://localhost:8080/busqueda/getEscenarios`).subscribe({
+      next: (data) => {
+        this.escenarios = data.map(e => ({...e, expanded: false, espectaculos: []}));
+        this.cdRef.detectChanges();
+      },
+      error: () => {
+        this.mensajeError = "Error cargando los escenarios.";
+        this.cdRef.detectChanges();
+      }
+    });
+  }
+
+  toggleEscenario(escenario: Escenario) {
+    if (this.enCola) return;
+    
+    escenario.expanded = !escenario.expanded;
+    
+    if (escenario.expanded && (!escenario.espectaculos || escenario.espectaculos.length === 0)) {
+      this.http.get<Espectaculo[]>(`http://localhost:8080/busqueda/getEspectaculosPorEscenario?escenarioId=${escenario.id}&sessionId=${this.sessionId}`)
+        .subscribe({
+          next: (data) => {
+            escenario.espectaculos = data;
+            this.cdRef.detectChanges();
+          },
+          error: (err) => {
+             if (err.status === 403) this.mensajeError = 'Sesión caducada. Debe esperar en la cola.';
+             else this.mensajeError = 'Error cargando espectáculos del escenario.';
+             this.cdRef.detectChanges();
+          }
+        });
+    } else {
+      this.cdRef.detectChanges();
+    }
   }
 
   buscar() {
     this.mensajeError = '';
     if (this.enCola) {
       this.mensajeError = `Estás en la cola virtual. Posición: ${this.posicionCola}. Por favor, espera.`;
+      this.cdRef.detectChanges();
       return;
     }
 
     if (!this.terminoBusqueda.trim()) {
       this.espectaculos = [];
+      this.cdRef.detectChanges();
       return;
     }
 
-    // Llama al backend
     const url = `http://localhost:8080/busqueda/getEspectaculos?artista=${encodeURIComponent(this.terminoBusqueda)}&sessionId=${this.sessionId}`;
     
     this.http.get<Espectaculo[]>(url).subscribe({
@@ -78,14 +136,15 @@ export class EspectaculosComponent implements OnInit {
         if (this.espectaculos.length === 0) {
           this.mensajeError = 'No se han encontrado espectáculos para ese artista.';
         }
+        this.cdRef.detectChanges();
       },
       error: (err) => {
-        console.error('Error fetching data', err);
         if (err.status === 403) {
            this.mensajeError = 'Debe esperar en la cola virtual para acceder al sistema.';
         } else {
            this.mensajeError = 'Error conectando con el servidor.';
         }
+        this.cdRef.detectChanges();
       }
     });
   }

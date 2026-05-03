@@ -1,5 +1,8 @@
-<div class="compra-container">
-  <h2>Ubicaciones y Entradas</h2>
+<div class="theme-dark container">
+  <div class="header">
+    <h1>Ubicaciones y Entradas</h1>
+    <p class="subtitle">Selecciona tu butaca o zona preferida y completa el pago de forma segura.</p>
+  </div>
 
   <div *ngIf="mensajeError" class="error-msg">
     {{ mensajeError }}
@@ -9,38 +12,72 @@
   <div class="resumen-box" *ngIf="resumen">
     <h3>Resumen de Disponibilidad</h3>
     <div class="stats">
-      <span>Total: <b>{{ resumen.total }}</b></span>
-      <span class="libres">Libres: <b>{{ resumen.libres }}</b></span>
-      <span class="reservadas">Reservadas: <b>{{ resumen.reservadas }}</b></span>
-      <span class="vendidas">Vendidas: <b>{{ resumen.vendidas }}</b></span>
+      <span class="stat-badge stat-total">Total: <b>{{ resumen.total }}</b></span>
+      <span class="stat-badge stat-libres">Libres: <b>{{ resumen.libres }}</b></span>
+      <span class="stat-badge stat-reservadas">Reservadas: <b>{{ resumen.reservadas }}</b></span>
+      <span class="stat-badge stat-vendidas">Vendidas: <b>{{ resumen.vendidas }}</b></span>
     </div>
   </div>
 
   <!-- Listado de Entradas Distinguiendo el Polimorfismo -->
   <div class="entradas-grid" *ngIf="entradas && entradas.length > 0">
     <div class="entrada-card" *ngFor="let ent of entradas" [ngClass]="ent.estado ? ent.estado.toLowerCase() : ''">
+      <div class="card-content">
+        <!-- Entrada Precisa -->
+        <div *ngIf="ent.tipo === 'Precisa' || ent.tipo === 'precisa'">
+          <h4>💺 Butaca Precisa</h4>
+          <p class="ubicacion-details">Planta: {{ ent.planta }} | Fila: {{ ent.fila }} | Col: {{ ent.columna }}</p>
+        </div>
 
-      <!-- Entrada Precisa -->
-      <div *ngIf="ent.tipo === 'Precisa' || ent.tipo === 'precisa'">
-        <h4>Butaca Precisa</h4>
-        <p>Planta: {{ ent.planta }} | Fila: {{ ent.fila }} | Col: {{ ent.columna }}</p>
+        <!-- Entrada DeZona -->
+        <div *ngIf="ent.tipo === 'DeZona' || ent.tipo === 'dezona'">
+          <h4>🎫 Entrada de Zona</h4>
+          <p class="ubicacion-details">Zona Asignada: {{ ent.zona }}</p>
+        </div>
+
+        <p class="precio">{{ ent.precio / 100 | currency:'EUR':'symbol' }}</p>
+        <span class="estado-badge" [ngClass]="ent.estado.toLowerCase()">{{ ent.estado }}</span>
       </div>
 
-      <!-- Entrada DeZona -->
-      <div *ngIf="ent.tipo === 'DeZona' || ent.tipo === 'dezona'">
-        <h4>Entrada de Zona</h4>
-        <p>Zona Asignada: {{ ent.zona }}</p>
+      <div class="card-action">
+        <button class="btn-primary" *ngIf="ent.estado === 'DISPONIBLE'" (click)="preReservar(ent)">
+          Seleccionar
+        </button>
+        <button class="btn-disabled btn-reservada" *ngIf="ent.estado === 'RESERVADA'" disabled>
+          En Proceso
+        </button>
+        <button class="btn-disabled btn-vendida" *ngIf="ent.estado === 'VENDIDA'" disabled>
+          Agotada
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pasarela de Pago / Checkout -->
+  <div class="checkout-box" *ngIf="entradaSeleccionada">
+    <div *ngIf="!compraCompletada">
+      <h3>🔒 Pasarela de Pago Segura</h3>
+      <p class="checkout-timer">Has reservado la entrada #{{ entradaSeleccionada.id }}. Tienes 2 minutos para completar la operación antes de que se libere automáticamente.</p>
+      
+      <div class="login-esiusuarios">
+        <h4>Identificación requerida (EsiUsuarios)</h4>
+        <div class="input-group">
+          <input type="text" [(ngModel)]="loginName" placeholder="Nombre de Usuario" class="dark-input" />
+        </div>
+        <div class="input-group">
+          <input type="password" [(ngModel)]="loginPwd" placeholder="Contraseña" class="dark-input" />
+        </div>
       </div>
 
-      <p class="precio">{{ ent.precio / 100 | currency:'EUR':'symbol' }}</p>
-      <p class="estado-label">Estado: {{ ent.estado }}</p>
-
-      <button *ngIf="ent.estado === 'DISPONIBLE'" (click)="null">
-        Pre-Reservar
+      <button class="btn-checkout" (click)="confirmarPago()" [disabled]="!loginName || !loginPwd">
+        Confirmar Identidad y Pagar
       </button>
-      <button *ngIf="ent.estado !== 'DISPONIBLE'" disabled>
-        No Disponible
-      </button>
+    </div>
+    
+    <div *ngIf="compraCompletada" class="success-box">
+      <div class="success-icon">✓</div>
+      <h3>¡Compra confirmada!</h3>
+      <p>Las entradas y la factura oficial han sido enviadas a tu correo electrónico.</p>
     </div>
   </div>
 </div>

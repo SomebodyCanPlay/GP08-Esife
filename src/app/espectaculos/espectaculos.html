@@ -1,24 +1,80 @@
-<div class="search-container">
-  <h2>Buscador de Espectáculos</h2>
-  <div class="search-box">
-    <input 
-      type="text" 
-      [(ngModel)]="terminoBusqueda" 
-      (keyup.enter)="buscar()"
-      placeholder="Introduce el nombre del artista (ej: Natos y Waor, Radiohead)" 
-    />
-    <button (click)="buscar()">Buscar</button>
+<div class="theme-dark container">
+  <div class="header">
+    <h1>Cartelera de Espectáculos</h1>
+    <p class="subtitle">Encuentra tus eventos favoritos en los mejores recintos.</p>
   </div>
 
   <div *ngIf="mensajeError" class="error-msg">
     {{ mensajeError }}
   </div>
 
-  <div class="results-grid" *ngIf="espectaculos.length > 0">
-    <div class="card" *ngFor="let esp of espectaculos">
-      <h3>{{ esp.artista }}</h3>
-      <p>Fecha: {{ esp.fecha | date:'dd/MM/yyyy HH:mm' }}</p>
-      <button [routerLink]="['/compra', esp.id]">Ver Entradas</button>
+  <div *ngIf="!enCola">
+    <!-- Buscador Opcional -->
+    <div class="search-box">
+      <input 
+        type="text" 
+        [(ngModel)]="terminoBusqueda" 
+        (keyup.enter)="buscar()"
+        placeholder="Buscar por artista (opcional)" 
+        class="dark-input"
+      />
+      <button (click)="buscar()" class="btn-primary">Buscar</button>
     </div>
+
+    <!-- Resultados Búsqueda (Si existen) -->
+    <div *ngIf="espectaculos.length > 0" class="search-results">
+      <h3 style="color: #fff; margin-bottom: 15px;">Resultados de la Búsqueda:</h3>
+      <div class="results-grid">
+        <div class="card" *ngFor="let esp of espectaculos">
+          <h3>{{ esp.artista }}</h3>
+          <p>Fecha: {{ esp.fecha | date:'dd/MM/yyyy HH:mm' }}</p>
+          <button [routerLink]="['/compra', esp.id]" class="btn-comprar">Ver Entradas</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botón Ver Espectáculos -->
+    <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
+       <button class="btn-primary" style="font-size: 1.2rem; padding: 15px 40px;" (click)="verConciertos()" *ngIf="!mostrarEscenarios">
+         Ver Conciertos
+       </button>
+    </div>
+
+    <!-- Listado por Escenarios (Acordeones) -->
+    <div *ngIf="mostrarEscenarios">
+      <h2 class="section-title">Explorar por Recintos</h2>
+      <div class="accordion-container">
+        <div *ngFor="let esc of escenarios" class="accordion-item">
+          <div class="accordion-header" (click)="toggleEscenario(esc)">
+            <div class="escenario-info">
+              <h3>{{ esc.nombre }}</h3>
+              <p>{{ esc.descripcion }}</p>
+            </div>
+            <div class="toggle-icon">{{ esc.expanded ? '▼' : '▶' }}</div>
+          </div>
+          
+          <div class="accordion-content" *ngIf="esc.expanded">
+            <div *ngIf="esc.espectaculos && esc.espectaculos.length === 0" class="no-data">
+              No hay espectáculos programados en este recinto.
+            </div>
+            <div class="results-grid">
+              <div *ngFor="let espectaculo of esc.espectaculos" class="card">
+                <h3>{{ espectaculo.artista }}</h3>
+                <p>Fecha: {{ espectaculo.fecha | date:'dd/MM/yyyy HH:mm' }}</p>
+                <button [routerLink]="['/compra', espectaculo.id]" class="btn-comprar">Ver Entradas</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vista Cola Virtual -->
+  <div *ngIf="enCola" class="cola-container">
+    <div class="spinner"></div>
+    <h2>Sala de Espera Virtual</h2>
+    <p>Tu posición en la cola es: <strong style="color: #ff3366; font-size: 1.5rem;">{{ posicionCola }}</strong></p>
+    <p style="color: #aaa;">Por favor, no recargues la página.</p>
   </div>
 </div>

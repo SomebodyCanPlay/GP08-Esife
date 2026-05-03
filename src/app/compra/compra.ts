@@ -1,13 +1,15 @@
 import { Component, OnInit, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
+import { TaquillaService } from '../services/taquilla.service';
 
 export interface Entrada {
   id: number;
   precio: number;
   estado: string;
-  tipo: string; // "precisa" o "dezona" gracias al @JsonTypeInfo de tu Backend
+  tipo: string;
   fila?: number;
   columna?: number;
   planta?: number;
@@ -24,7 +26,7 @@ export interface DtoEntradas {
 @Component({
   selector: 'app-compra',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './compra.html',
   styleUrls: ['./compra.css']
 })
@@ -36,18 +38,22 @@ export class CompraComponent implements OnInit, AfterViewInit {
 
   sessionId: string = '';
 
+  // Checkout UI state
+  entradaSeleccionada: Entrada | null = null;
+  compraCompletada: boolean = false;
+  loginName: string = '';
+  loginPwd: string = '';
+
   constructor(
     private http: HttpClient, 
     private route: ActivatedRoute,
-    private cdRef: ChangeDetectorRef
+    private cdRef: ChangeDetectorRef,
+    private taquillaService: TaquillaService
   ) {}
 
   ngOnInit(): void {
     if (typeof window !== 'undefined' && window.sessionStorage) {
-      // Recuperar el ID de sesión generado en la búsqueda
       this.sessionId = sessionStorage.getItem('taquilla_sessionId') || '';
-
-      // 1. Obtener ID de la URL
       this.espectaculoId = Number(this.route.snapshot.paramMap.get('id'));
 
       if (!this.sessionId) {
@@ -59,7 +65,6 @@ export class CompraComponent implements OnInit, AfterViewInit {
   ngAfterViewInit(): void {
     if (typeof window !== 'undefined' && window.sessionStorage) {
       if (!isNaN(this.espectaculoId) && this.sessionId) {
-        // Ejecución retrasada levemente tras la renderización de la vista
         setTimeout(() => {
           this.cargarDatos();
         }, 10);
@@ -68,12 +73,11 @@ export class CompraComponent implements OnInit, AfterViewInit {
   }
 
   cargarDatos() {
-    // 2. Traer la lista detallada de butacas
     this.http.get<Entrada[]>(`http://localhost:8080/busqueda/getEntradas?espectaculoid=${this.espectaculoId}&sessionId=${this.sessionId}`)
       .subscribe({
         next: (data) => {
           this.entradas = data;
-          this.cdRef.detectChanges(); // Forzar actualización visual
+          this.cdRef.detectChanges();
         },
         error: (err) => {
           this.manejarError(err);
@@ -81,7 +85,6 @@ export class CompraComponent implements OnInit, AfterViewInit {
         }
       });
 
-    // 3. Traer el resumen matemático del profesor
     this.http.get<DtoEntradas>(`http://localhost:8080/busqueda/getResumenEntradas?espectaculoId=${this.espectaculoId}&sessionId=${this.sessionId}`)
       .subscribe({
         next: (data) => {
@@ -90,6 +93,45 @@ export class CompraComponent implements OnInit, AfterViewInit {
         },
         error: (err) => console.error('Error cargando resumen', err)
       });
+  }
+
+  preReservar(ent: Entrada) {
+    this.taquillaService.preReservar(this.sessionId, ent.id).subscribe({
+      next: (res) => {
+        ent.estado = 'RESERVADA';
+        this.entradaSeleccionada = ent;
+        this.mensajeError = '';
+        this.cdRef.detectChanges();
+      },
+      error: (err) => {
+        this.mensajeError = 'Error al pre-reservar la entrada. Puede que ya esté ocupada.';
+        this.cdRef.detectChanges();
+      }
+    });
+  }
+
+  confirmarPago() {
+    // Simulamos el inicio de sesión para obtener el token desde EsiUsuarios
+    this.taquillaService.loginEsiusuarios(this.loginName, this.loginPwd).subscribe({
+      next: (userToken) => {
+        // Con el token de usuario, confirmamos la compra en EsiEntradas
+        this.taquillaService.confirmarCompra(this.sessionId, userToken).subscribe({
+          next: (res) => {
+            this.compraCompletada = true;
+            this.mensajeError = '';
+            this.cdRef.detectChanges();
+          },
+          error: (err) => {
+            this.mensajeError = 'Error confirmando el pago. El token podría no ser válido o la reserva caducó.';
+            this.cdRef.detectChanges();
+          }
+        });
+      },
+      error: (err) => {
+        this.mensajeError = 'Credenciales de EsiUsuarios incorrectas. No se pudo iniciar sesión.';
+        this.cdRef.detectChanges();
+      }
+    });
   }
 
   manejarError(err: any) {
