@@ -96,6 +96,7 @@ export class CompraComponent implements OnInit, AfterViewInit {
   }
 
   preReservar(ent: Entrada) {
+    if (this.entradaSeleccionada) return; // Evitar seleccionar más de una
     this.taquillaService.preReservar(this.sessionId, ent.id).subscribe({
       next: (res) => {
         ent.estado = 'RESERVADA';
@@ -105,6 +106,24 @@ export class CompraComponent implements OnInit, AfterViewInit {
       },
       error: (err) => {
         this.mensajeError = 'Error al pre-reservar la entrada. Puede que ya esté ocupada.';
+        this.cdRef.detectChanges();
+      }
+    });
+  }
+
+  cancelarSeleccion() {
+    if (!this.entradaSeleccionada) return;
+    this.taquillaService.cancelarReserva(this.sessionId, this.entradaSeleccionada.id).subscribe({
+      next: (res) => {
+        // Volver a poner la entrada en verde
+        let ent = this.entradas.find(e => e.id === this.entradaSeleccionada!.id);
+        if (ent) ent.estado = 'DISPONIBLE';
+        this.entradaSeleccionada = null;
+        this.mensajeError = '';
+        this.cdRef.detectChanges();
+      },
+      error: (err) => {
+        this.mensajeError = 'Error al cancelar la reserva.';
         this.cdRef.detectChanges();
       }
     });

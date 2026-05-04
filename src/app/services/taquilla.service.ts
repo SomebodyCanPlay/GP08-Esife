@@ -17,6 +17,12 @@ export class TaquillaService {
     });
   }
 
+  cancelarReserva(sessionId: string, idEntrada: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/compras/cancelar?sessionId=${sessionId}`, {
+      idEntrada: idEntrada
+    });
+  }
+
   confirmarCompra(sessionId: string, userToken: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/compras/confirmar?sessionId=${sessionId}`, {
       token: userToken
