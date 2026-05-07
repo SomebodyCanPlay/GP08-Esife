@@ -1,1 +1,26 @@
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- NAVBAR GLOBAL — aparece en todas las páginas excepto /auth -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<nav class="navbar" *ngIf="mostrarNavbar">
+  <div class="nav-brand" (click)="router.navigate(['/'])">
+    <span class="nav-logo">🎭</span>
+    <span class="nav-title">ESIentradas</span>
+  </div>
+
+  <div class="nav-actions">
+    <!-- Usuario NO logeado → botones de login y registro -->
+    <ng-container *ngIf="!estaLogeado">
+      <button class="btn-nav-ghost" (click)="irAlLogin()">Iniciar sesión</button>
+      <button class="btn-nav-primary" (click)="irAlRegistro()">Registrarse</button>
+    </ng-container>
+
+    <!-- Usuario SÍ logeado → muestra email y botón de salir -->
+    <ng-container *ngIf="estaLogeado">
+      <span class="nav-user">👤 {{ nombreCorto }}</span>
+      <button class="btn-nav-ghost" (click)="cerrarSesion()">Cerrar sesión</button>
+    </ng-container>
+  </div>
+</nav>
+
+<!-- Aquí se carga el componente de la ruta activa (espectaculos, compra, auth...) -->
 <router-outlet></router-outlet>

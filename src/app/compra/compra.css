@@ -213,7 +213,7 @@
   border-radius: 12px;
   padding: 25px;
   position: sticky;
-  top: 20px;
+  top: 80px; /* 60px navbar + 20px margen */
 }
 
 .checkout-box h3 {
@@ -289,3 +289,17 @@
 }
 
 .success-box h3 { color: #3fb950; border: none; }
+
+/* Botón de redirección al login — estilo diferente para distinguirlo del de pagar */
+.btn-login-redirect {
+  background: linear-gradient(90deg, #6e40c9, #4169e1) !important;
+}
+
+.btn-login-redirect:hover {
+  background: linear-gradient(90deg, #8a57e3, #5580f0) !important;
+}
+
+/* Separación entre el header y el contenido (para que el navbar no tape nada) */
+.theme-dark.container {
+  padding-top: 30px;
+}

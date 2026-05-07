@@ -70,11 +70,34 @@
     </div>
   </div>
 
-  <!-- Vista Cola Virtual -->
+  <!-- Cola Virtual — se muestra mientras enCola = true -->
   <div *ngIf="enCola" class="cola-container">
     <div class="spinner"></div>
-    <h2>Sala de Espera Virtual</h2>
-    <p>Tu posición en la cola es: <strong style="color: #ff3366; font-size: 1.5rem;">{{ posicionCola }}</strong></p>
-    <p style="color: #aaa;">Por favor, no recargues la página.</p>
+
+    <h2 style="color: #fff; margin-bottom: 10px;">Sala de Espera Virtual</h2>
+    <p style="color: #8b949e; margin-bottom: 30px;">
+      El sistema solo permite {{ MAX_SIMULTANEOS }} compradores simultáneos para garantizar que las entradas no se agoten sin que puedas comprarlas.
+    </p>
+
+    <!-- Posición en la cola -->
+    <div class="posicion-badge">
+      <span class="posicion-numero">{{ posicionCola }}</span>
+      <span class="posicion-label">Tu posición</span>
+    </div>
+
+    <!-- Mensaje dinámico según posición -->
+    <p class="cola-mensaje">{{ mensajeCola }}</p>
+
+    <!-- Tiempo estimado -->
+    <p class="cola-tiempo">⏱ Tiempo estimado: <strong>{{ tiempoEstimado }}</strong></p>
+
+    <!-- Barra de progreso animada -->
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill"></div>
+    </div>
+
+    <p style="color: #555; font-size: 0.85rem; margin-top: 25px;">
+      🔄 La cola se actualiza automáticamente cada 2 segundos. No recargues la página.
+    </p>
   </div>
 </div>

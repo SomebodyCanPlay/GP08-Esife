@@ -1,1 +1,22 @@
-/* You can add global styles to this file, and also import other style files */
+/* Estilos globales de ESIentradas */
+
+/* ============================================================
+   Fondo oscuro en TODA la página — elimina los laterales blancos
+   ============================================================
+   El problema: los componentes usaban .theme-dark con fondo oscuro
+   pero el <html> y <body> seguían siendo blancos (defecto del navegador).
+   Esto hacía que los márgenes y laterales se vieran blancos.
+   Solución: aplicar el color de fondo oscuro directamente en html y body.
+*/
+*, *::before, *::after {
+  box-sizing: border-box;  /* Calcula el tamaño incluyendo padding y borde */
+}
+
+html, body {
+  margin: 0;               /* Eliminar el margen por defecto del navegador */
+  padding: 0;              /* Eliminar el padding por defecto */
+  background-color: #0d1117; /* El mismo fondo oscuro que usan los componentes */
+  color: #c9d1d9;          /* Color de texto claro por defecto */
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;       /* Al menos tan alto como la pantalla */
+}

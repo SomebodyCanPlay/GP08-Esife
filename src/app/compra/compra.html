@@ -24,7 +24,7 @@
     <!-- Columna Izquierda: Listado de Entradas -->
     <div class="entradas-grid" *ngIf="entradas && entradas.length > 0">
       <div class="entrada-card" *ngFor="let ent of entradas"
-           [ngClass]="{'seleccionada': entradaSeleccionada?.id === ent.id}">
+           [ngClass]="{'seleccionada': estaSeleccionada(ent.id)}">
         <div class="card-content">
           <!-- Butaca Precisa -->
           <div *ngIf="ent.tipo === 'Precisa' || ent.tipo === 'precisa'">
@@ -40,16 +40,13 @@
           <span class="estado-badge" [ngClass]="ent.estado.toLowerCase()">{{ ent.estado }}</span>
         </div>
         <div class="card-action">
-          <button class="btn-primary" *ngIf="ent.estado === 'DISPONIBLE' && !entradaSeleccionada" (click)="preReservar(ent)">
+          <button class="btn-primary" *ngIf="ent.estado === 'DISPONIBLE'" (click)="preReservar(ent)">
             Seleccionar
           </button>
-          <button class="btn-disabled btn-vendida" *ngIf="ent.estado === 'DISPONIBLE' && entradaSeleccionada" disabled>
-            Bloqueado
-          </button>
-          <button class="btn-disabled btn-reservada" *ngIf="ent.estado === 'RESERVADA' && entradaSeleccionada?.id !== ent.id" disabled>
+          <button class="btn-disabled btn-reservada" *ngIf="ent.estado === 'RESERVADA' && !estaSeleccionada(ent.id)" disabled>
             En Proceso
           </button>
-          <button class="btn-quitar" *ngIf="ent.estado === 'RESERVADA' && entradaSeleccionada?.id === ent.id" (click)="cancelarSeleccion()">
+          <button class="btn-quitar" *ngIf="ent.estado === 'RESERVADA' && estaSeleccionada(ent.id)" (click)="cancelarSeleccion(ent)">
             Quitar ❌
           </button>
           <button class="btn-disabled btn-vendida" *ngIf="ent.estado === 'VENDIDA'" disabled>
@@ -62,45 +59,58 @@
     <!-- Columna Derecha: Pasarela de Pago Fijada -->
     <div class="checkout-box">
 
-      <div *ngIf="!entradaSeleccionada">
-        <h3 style="color: #8b949e;">🛒 Tu Carrito</h3>
+      <div *ngIf="entradasSeleccionadas.length === 0">
+        <h3>🛒 Tu Carrito</h3>
         <p style="text-align:center; color: #8b949e; margin-top: 30px;">Selecciona una entrada de la izquierda para verla aquí.</p>
       </div>
 
-      <div *ngIf="entradaSeleccionada && !compraCompletada">
+      <div *ngIf="entradasSeleccionadas.length > 0 && !compraCompletada">
         <h3>🔒 Tu Carrito y Pago</h3>
         <p class="checkout-timer">Tienes <b>2 minutos</b> para completar la operación.</p>
-        <p style="text-align: center; color: #8b949e; font-size: 0.9rem; margin-top: -10px; margin-bottom: 20px;">
-          <i>(Solo puedes comprar un máximo de 1 entrada por operación)</i>
-        </p>
 
         <!-- Resumen del carrito -->
         <div class="checkout-summary">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-            <p style="margin: 0;">
-              <span>Entrada:</span>
-              <strong>{{ entradaSeleccionada.tipo === 'Precisa' || entradaSeleccionada.tipo === 'precisa' ? 'Butaca F' + entradaSeleccionada.fila + ' C' + entradaSeleccionada.columna : 'Zona ' + entradaSeleccionada.zona }}</strong>
-            </p>
-            <button class="btn-close-cart" (click)="cancelarSeleccion()" title="Cancelar selección">❌</button>
+          <h4 style="margin-top: 0; color: #fff; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">Entradas Seleccionadas</h4>
+          
+          <div *ngFor="let sel of entradasSeleccionadas" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; border-bottom: 1px dashed #30363d; padding-bottom: 10px;">
+            <div>
+              <p style="margin: 0;">
+                <strong>{{ sel.tipo === 'Precisa' || sel.tipo === 'precisa' ? 'Butaca F' + sel.fila + ' C' + sel.columna : 'Zona ' + sel.zona }}</strong>
+              </p>
+              <p style="margin: 5px 0 0 0; color: #8b949e;">{{ sel.precio / 100 | currency:'EUR':'symbol' }}</p>
+            </div>
+            <button class="btn-close-cart" (click)="cancelarSeleccion(sel)" title="Cancelar selección">❌</button>
           </div>
-          <p style="margin-top: 0;"><span>Estado:</span> <strong style="color: #d29922;">RESERVADA</strong></p>
-          <div class="total-price">{{ entradaSeleccionada.precio / 100 | currency:'EUR':'symbol' }}</div>
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+            <span style="font-size: 1.1rem; color: #c9d1d9;">Total:</span>
+            <div class="total-price" style="font-size: 1.8rem;">{{ precioTotal / 100 | currency:'EUR':'symbol' }}</div>
+          </div>
         </div>
 
-        <!-- Login EsiUsuarios -->
+        <!-- Estado de sesión y botón de acción -->
         <div class="login-esiusuarios">
-          <h4 style="color: #fff; margin-bottom: 15px;">🔑 Identificación (EsiUsuarios)</h4>
-          <div class="input-group" style="margin-bottom: 15px;">
-            <input type="text" [(ngModel)]="loginName" class="dark-input" placeholder="Usuario (correo)">
-          </div>
-          <div class="input-group" style="margin-bottom: 15px;">
-            <input type="password" [(ngModel)]="loginPwd" class="dark-input" placeholder="Contraseña">
-          </div>
-        </div>
+          <!-- Logeado → marca verde + botón de pagar -->
+          <ng-container *ngIf="userToken">
+            <p style="color: #3fb950; text-align: center; margin: 0 0 15px 0; font-size: 0.9rem;">
+              ✅ Sesión activa
+            </p>
+            <button class="btn-checkout" (click)="confirmarPago()"
+                    [disabled]="entradasSeleccionadas.length === 0">
+              💳 Confirmar Compra
+            </button>
+          </ng-container>
 
-        <button class="btn-checkout" (click)="confirmarPago()" [disabled]="!loginName || !loginPwd">
-          💳 Pagar Ahora
-        </button>
+          <!-- No logeado → botón que lleva al login y vuelve aquí tras autenticarse -->
+          <ng-container *ngIf="!userToken">
+            <p style="color: #8b949e; text-align: center; margin: 0 0 15px 0; font-size: 0.9rem;">
+              Necesitas una cuenta para finalizar la compra
+            </p>
+            <button class="btn-checkout btn-login-redirect" (click)="confirmarPago()">
+              🔑 Inicia sesión para comprar
+            </button>
+          </ng-container>
+        </div>
       </div>
 
       <div *ngIf="compraCompletada" class="success-box">

@@ -1,0 +1,213 @@
+<div class="auth-page">
+
+  <!-- Logo / Título -->
+  <div class="auth-header">
+    <div class="logo-icon">🎭</div>
+    <h1>ESIentradas</h1>
+    <p class="auth-subtitle">Tu taquilla virtual de espectáculos</p>
+  </div>
+
+  <!-- Tarjeta central -->
+  <div class="auth-card">
+
+    <!-- ════════ INICIO DE SESIÓN ════════ -->
+    <div *ngIf="pantalla === 'login'">
+      <h2 class="form-title">Iniciar sesión</h2>
+
+      <div *ngIf="mensajeExito" class="msg-exito">{{ mensajeExito }}</div>
+      <div *ngIf="mensajeError" class="msg-error">{{ mensajeError }}</div>
+
+      <!-- Campo email con validación en tiempo real -->
+      <div class="form-group">
+        <label>Correo electrónico</label>
+        <input type="email" [(ngModel)]="loginEmail"
+               (input)="validarEmail(loginEmail)"
+               (keyup.enter)="iniciarSesion()"
+               placeholder="tu@correo.com" class="input-field"
+               [class.input-error]="errorEmail && loginEmail"
+               autocomplete="email">
+        <span class="field-error" *ngIf="errorEmail && loginEmail">⚠ {{ errorEmail }}</span>
+      </div>
+
+      <!-- Campo contraseña con ojo -->
+      <div class="form-group">
+        <label>Contraseña</label>
+        <div class="input-wrapper">
+          <input [type]="mostrarLoginPwd ? 'text' : 'password'"
+                 [(ngModel)]="loginPwd"
+                 (keyup.enter)="iniciarSesion()"
+                 placeholder="Tu contraseña" class="input-field input-with-eye"
+                 autocomplete="current-password">
+          <button type="button" class="btn-ojo" (click)="mostrarLoginPwd = !mostrarLoginPwd"
+                  [title]="mostrarLoginPwd ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+            {{ mostrarLoginPwd ? 'Ocultar' : 'Ver' }}
+          </button>
+        </div>
+      </div>
+
+      <button class="btn-main" (click)="iniciarSesion()" [disabled]="cargando">
+        <span *ngIf="!cargando">Entrar →</span>
+        <span *ngIf="cargando" class="spinner-btn"></span>
+      </button>
+
+      <div class="auth-links">
+        <a (click)="mostrar('recuperar')">¿Olvidaste tu contraseña?</a>
+        <span>·</span>
+        <a (click)="mostrar('registro')">Crear cuenta</a>
+      </div>
+    </div>
+
+    <!-- ════════ REGISTRO ════════ -->
+    <div *ngIf="pantalla === 'registro'">
+      <h2 class="form-title">Crear cuenta</h2>
+
+      <div *ngIf="mensajeError" class="msg-error">{{ mensajeError }}</div>
+
+      <div class="form-group">
+        <label>Nombre completo</label>
+        <input type="text" [(ngModel)]="regNombre"
+               placeholder="Tu nombre" class="input-field">
+      </div>
+
+      <!-- Email con validación -->
+      <div class="form-group">
+        <label>Correo electrónico</label>
+        <input type="email" [(ngModel)]="regEmail"
+               (input)="validarEmail(regEmail)"
+               placeholder="tu@correo.com" class="input-field"
+               [class.input-error]="errorEmail && regEmail">
+        <span class="field-error" *ngIf="errorEmail && regEmail">⚠ {{ errorEmail }}</span>
+      </div>
+
+      <!-- Contraseña con ojo y checklist de requisitos -->
+      <div class="form-group">
+        <label>Contraseña</label>
+        <div class="input-wrapper">
+          <input [type]="mostrarRegPwd ? 'text' : 'password'"
+                 [(ngModel)]="regPwd"
+                 (input)="validarPassword(regPwd)"
+                 placeholder="Mínimo 6 caracteres" class="input-field input-with-eye"
+                 [class.input-error]="regPwd && !passwordCompleta">
+          <button type="button" class="btn-ojo" (click)="mostrarRegPwd = !mostrarRegPwd"
+                  [title]="mostrarRegPwd ? 'Ocultar' : 'Mostrar'">
+            {{ mostrarRegPwd ? 'Ocultar' : 'Ver' }}
+          </button>
+        </div>
+
+        <!-- Checklist visual — aparece cuando el usuario empieza a escribir -->
+        <div class="pwd-checklist" *ngIf="regPwd">
+          <span [class.req-ok]="pwdTieneMinimo" [class.req-fail]="!pwdTieneMinimo">
+            {{ pwdTieneMinimo ? '✅' : '❌' }} Mínimo 6 caracteres
+          </span>
+          <span [class.req-ok]="pwdTieneMayuscula" [class.req-fail]="!pwdTieneMayuscula">
+            {{ pwdTieneMayuscula ? '✅' : '❌' }} Una letra mayúscula (A-Z)
+          </span>
+          <span [class.req-ok]="pwdTieneMinuscula" [class.req-fail]="!pwdTieneMinuscula">
+            {{ pwdTieneMinuscula ? '✅' : '❌' }} Una letra minúscula (a-z)
+          </span>
+          <span [class.req-ok]="pwdTieneEspecial" [class.req-fail]="!pwdTieneEspecial">
+            {{ pwdTieneEspecial ? '✅' : '❌' }} Un número o carácter especial (!@#$...)
+          </span>
+        </div>
+      </div>
+
+      <!-- Repetir contraseña con ojo -->
+      <div class="form-group">
+        <label>Repetir contraseña</label>
+        <div class="input-wrapper">
+          <input [type]="mostrarRegPwdConfirm ? 'text' : 'password'"
+                 [(ngModel)]="regPwdConfirm"
+                 (keyup.enter)="registrarse()"
+                 placeholder="Repite tu contraseña" class="input-field input-with-eye"
+                 [class.input-error]="regPwdConfirm && regPwd !== regPwdConfirm">
+          <button type="button" class="btn-ojo" (click)="mostrarRegPwdConfirm = !mostrarRegPwdConfirm"
+                  [title]="mostrarRegPwdConfirm ? 'Ocultar' : 'Mostrar'">
+            {{ mostrarRegPwdConfirm ? 'Ocultar' : 'Ver' }}
+          </button>
+        </div>
+        <span class="field-error" *ngIf="regPwdConfirm && regPwd !== regPwdConfirm">
+          ⚠ Las contraseñas no coinciden
+        </span>
+      </div>
+
+      <button class="btn-main" (click)="registrarse()" [disabled]="cargando || !passwordCompleta">
+        <span *ngIf="!cargando">Registrarse →</span>
+        <span *ngIf="cargando" class="spinner-btn"></span>
+      </button>
+
+      <div class="auth-links">
+        <a (click)="mostrar('login')">← Ya tengo cuenta</a>
+      </div>
+    </div>
+
+    <!-- ════════ RECUPERAR CONTRASEÑA — Paso 1 ════════ -->
+    <div *ngIf="pantalla === 'recuperar'">
+      <h2 class="form-title">Recuperar contraseña</h2>
+      <p style="color: #8b949e; font-size: 0.95rem; margin-bottom: 20px;">
+        Te enviaremos un código de recuperación a tu correo.
+      </p>
+
+      <div *ngIf="mensajeError" class="msg-error">{{ mensajeError }}</div>
+
+      <div class="form-group">
+        <label>Correo electrónico</label>
+        <input type="email" [(ngModel)]="recEmail"
+               (input)="validarEmail(recEmail)"
+               (keyup.enter)="pedirCodigo()"
+               placeholder="tu@correo.com" class="input-field"
+               [class.input-error]="errorEmail && recEmail">
+        <span class="field-error" *ngIf="errorEmail && recEmail">⚠ {{ errorEmail }}</span>
+      </div>
+
+      <button class="btn-main" (click)="pedirCodigo()" [disabled]="cargando">
+        <span *ngIf="!cargando">Enviar código →</span>
+        <span *ngIf="cargando" class="spinner-btn"></span>
+      </button>
+
+      <div class="auth-links">
+        <a (click)="mostrar('login')">← Volver al inicio de sesión</a>
+      </div>
+    </div>
+
+    <!-- ════════ RECUPERAR CONTRASEÑA — Paso 2 ════════ -->
+    <div *ngIf="pantalla === 'codigoRecuperacion'">
+      <h2 class="form-title">Nueva contraseña</h2>
+
+      <div *ngIf="mensajeExito" class="msg-exito">{{ mensajeExito }}</div>
+      <div *ngIf="mensajeError" class="msg-error">{{ mensajeError }}</div>
+
+      <div class="form-group">
+        <label>Código recibido por email</label>
+        <input type="text" [(ngModel)]="recCodigo"
+               placeholder="Pega aquí el código" class="input-field">
+      </div>
+
+      <!-- Nueva contraseña con ojo -->
+      <div class="form-group">
+        <label>Nueva contraseña</label>
+        <div class="input-wrapper">
+          <input [type]="mostrarRecPwd ? 'text' : 'password'"
+                 [(ngModel)]="recNuevaPassword"
+                 (keyup.enter)="restablecerPassword()"
+                 placeholder="Mínimo 6 caracteres" class="input-field input-with-eye">
+          <button type="button" class="btn-ojo" (click)="mostrarRecPwd = !mostrarRecPwd"
+                  [title]="mostrarRecPwd ? 'Ocultar' : 'Mostrar'">
+            {{ mostrarRecPwd ? 'Ocultar' : 'Ver' }}
+          </button>
+        </div>
+      </div>
+
+      <button class="btn-main" (click)="restablecerPassword()" [disabled]="cargando">
+        <span *ngIf="!cargando">Cambiar contraseña →</span>
+        <span *ngIf="cargando" class="spinner-btn"></span>
+      </button>
+
+      <div class="auth-links">
+        <a (click)="mostrar('recuperar')">No recibí el código</a>
+        <span>·</span>
+        <a (click)="mostrar('login')">← Volver</a>
+      </div>
+    </div>
+
+  </div>
+</div>

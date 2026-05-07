@@ -1,0 +1,252 @@
+/* Página de autenticación — fondo oscuro centrado */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-color: #0d1117;
+}
+
+/* Cabecera con logo */
+.auth-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.logo-icon {
+  font-size: 3.5rem;
+  margin-bottom: 10px;
+}
+
+.auth-header h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, #ff3366, #ff9933);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+.auth-subtitle {
+  color: #8b949e;
+  margin-top: 8px;
+  font-size: 1rem;
+}
+
+/* Tarjeta central */
+.auth-card {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 16px;
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+/* Título del formulario */
+.form-title {
+  color: #fff;
+  font-size: 1.5rem;
+  margin: 0 0 25px 0;
+  font-weight: 700;
+}
+
+/* Grupos de campos */
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  display: block;
+  color: #8b949e;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.input-field {
+  width: 100%;
+  padding: 12px 16px;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.input-field:focus {
+  border-color: #ff3366;
+  box-shadow: 0 0 0 3px rgba(255, 51, 102, 0.15);
+}
+
+/* Botón principal */
+.btn-main {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(90deg, #ff3366, #ff9933);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+}
+
+.btn-main:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.btn-main:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Spinner pequeño dentro del botón */
+.spinner-btn {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Links secundarios (¿Olvidaste?, Crear cuenta, Volver) */
+.auth-links {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.auth-links a {
+  color: #58a6ff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.auth-links a:hover {
+  color: #ff3366;
+  text-decoration: underline;
+}
+
+.auth-links span {
+  color: #30363d;
+}
+
+/* Mensajes de éxito y error */
+.msg-exito {
+  background-color: rgba(63, 185, 80, 0.1);
+  color: #3fb950;
+  border: 1px solid rgba(63, 185, 80, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 0.95rem;
+}
+
+.msg-error {
+  background-color: rgba(248, 81, 73, 0.1);
+  color: #ff7b72;
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 0.95rem;
+}
+
+/* ── Wrapper para input + botón ojo ── */
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* El input cuando hay un ojo a la derecha */
+.input-with-eye {
+  padding-right: 44px !important;
+  width: 100%;
+}
+
+/* Botón del ojo — texto "Ver"/"Ocultar" dentro del input */
+.btn-ojo {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 6px;
+  line-height: 1;
+  color: #58a6ff;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  transition: color 0.2s;
+  user-select: none;
+}
+
+.btn-ojo:hover {
+  color: #79c0ff;
+}
+
+/* Campo con error de validación — borde rojo */
+.input-error {
+  border-color: #f85149 !important;
+  box-shadow: 0 0 0 3px rgba(248, 81, 73, 0.15) !important;
+}
+
+/* Mensaje de error pequeño debajo del campo */
+.field-error {
+  display: block;
+  color: #ff7b72;
+  font-size: 0.82rem;
+  margin-top: 5px;
+}
+
+/* ── Checklist de requisitos de contraseña ── */
+.pwd-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 12px;
+  background-color: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+/* Requisito NO cumplido → rojo */
+.req-fail {
+  color: #ff7b72;
+}
+
+/* Requisito SÍ cumplido → verde */
+.req-ok {
+  color: #3fb950;
+}
+

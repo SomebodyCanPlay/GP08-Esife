@@ -1,0 +1,88 @@
+/* ══════════════════════════════════════════════
+   NAVBAR GLOBAL
+   ══════════════════════════════════════════════ */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 60px;
+  background-color: rgba(13, 17, 23, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid #21262d;
+}
+
+/* Logo + nombre de la app */
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  text-decoration: none;
+  user-select: none;
+}
+
+.nav-logo {
+  font-size: 1.4rem;
+}
+
+.nav-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, #ff3366, #ff9933);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Grupo de botones de la derecha */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Email del usuario logeado */
+.nav-user {
+  color: #8b949e;
+  font-size: 0.9rem;
+  margin-right: 4px;
+}
+
+/* Botón fantasma (borde, sin relleno) */
+.btn-nav-ghost {
+  padding: 7px 16px;
+  background: transparent;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.btn-nav-ghost:hover {
+  border-color: #8b949e;
+  color: #fff;
+}
+
+/* Botón principal de la navbar (degradado) */
+.btn-nav-primary {
+  padding: 7px 16px;
+  background: linear-gradient(90deg, #ff3366, #ff9933);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn-nav-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}

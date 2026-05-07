@@ -1,19 +1,24 @@
 import { Routes } from '@angular/router';
 
 export const routes: Routes = [
-  // Cuando entres a "localhost:4200/", cargará la pantalla de espectáculos
-  { 
-    path: '', 
-    loadComponent: () => import('./espectaculos/espectaculos').then(m => m.EspectaculosComponent) 
+  // "/" → cartelera de espectáculos (visible sin login)
+  {
+    path: '',
+    loadComponent: () => import('./espectaculos/espectaculos').then(m => m.EspectaculosComponent)
   },
-  // Cuando entres a "localhost:4200/compra/1", cargará la de compra del evento 1
-  { 
-    path: 'compra/:id', 
-    loadComponent: () => import('./compra/compra').then(m => m.CompraComponent) 
+  // "/auth" → pantalla de login/registro (nueva ruta dedicada)
+  {
+    path: 'auth',
+    loadComponent: () => import('./auth/auth').then(m => m.AuthComponent)
   },
-  // Si alguien escribe una ruta que no existe, lo devuelve al inicio
-  { 
-    path: '**', 
-    redirectTo: '' 
+  // "/compra/1" → pantalla de compra del espectáculo id=1
+  {
+    path: 'compra/:id',
+    loadComponent: () => import('./compra/compra').then(m => m.CompraComponent)
+  },
+  // Ruta desconocida → inicio
+  {
+    path: '**',
+    redirectTo: ''
   }
 ];

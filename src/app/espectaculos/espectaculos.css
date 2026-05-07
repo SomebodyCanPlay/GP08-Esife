@@ -208,18 +208,87 @@
   background-color: #161b22;
   border-radius: 15px;
   border: 1px solid #30363d;
+  max-width: 500px;
+  margin: 40px auto;
 }
 
+/* Spinner giratorio */
 .spinner {
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
   border: 5px solid #30363d;
   border-top-color: #ff3366;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin: 0 auto 20px;
+  margin: 0 auto 25px;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* Badge grande con el número de posición */
+.posicion-badge {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(135deg, #ff3366, #ff9933);
+  border-radius: 50%;
+  width: 100px;
+  height: 100px;
+  justify-content: center;
+  margin: 0 auto 20px;
+  box-shadow: 0 0 30px rgba(255, 51, 102, 0.4);
+}
+
+.posicion-numero {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #fff;
+  line-height: 1;
+}
+
+.posicion-label {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.8);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Mensaje dinámico según posición */
+.cola-mensaje {
+  color: #c9d1d9;
+  font-size: 1.05rem;
+  margin: 10px 0;
+}
+
+/* Tiempo estimado */
+.cola-tiempo {
+  color: #8b949e;
+  font-size: 0.95rem;
+  margin-bottom: 25px;
+}
+
+/* Barra de progreso que se mueve de izquierda a derecha (simulada) */
+.progress-bar-container {
+  width: 100%;
+  height: 4px;
+  background-color: #30363d;
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 0 auto;
+  max-width: 300px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, #ff3366, #ff9933);
+  border-radius: 2px;
+  animation: slide 2s ease-in-out infinite;
+}
+
+@keyframes slide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
 }

@@ -1,8 +1,8 @@
-import { Component, OnInit, AfterViewInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TaquillaService } from '../services/taquilla.service';
 
 export interface Entrada {
@@ -30,7 +30,7 @@ export interface DtoEntradas {
   templateUrl: './compra.html',
   styleUrls: ['./compra.css']
 })
-export class CompraComponent implements OnInit, AfterViewInit {
+export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
   espectaculoId!: number;
   entradas: Entrada[] = [];
   resumen: DtoEntradas | null = null;
@@ -39,14 +39,18 @@ export class CompraComponent implements OnInit, AfterViewInit {
   sessionId: string = '';
 
   // Checkout UI state
-  entradaSeleccionada: Entrada | null = null;
+  entradasSeleccionadas: Entrada[] = [];
   compraCompletada: boolean = false;
-  loginName: string = '';
-  loginPwd: string = '';
+  // El token se recupera del sessionStorage (el usuario ya hizo login en la pantalla de auth)
+  userToken: string = '';
+
+  // Timer para el keep-alive de la cola (se cancela al salir de la página)
+  private keepAliveTimer: any = null;
 
   constructor(
-    private http: HttpClient, 
+    private http: HttpClient,
     private route: ActivatedRoute,
+    private router: Router,
     private cdRef: ChangeDetectorRef,
     private taquillaService: TaquillaService
   ) {}
@@ -56,10 +60,20 @@ export class CompraComponent implements OnInit, AfterViewInit {
       this.sessionId = sessionStorage.getItem('taquilla_sessionId') || '';
       this.espectaculoId = Number(this.route.snapshot.paramMap.get('id'));
 
+      // Recuperamos el token de sesión de esiusuarios guardado en el login
+      this.userToken = sessionStorage.getItem('esiusuarios_token') || '';
+
       if (!this.sessionId) {
-        this.mensajeError = 'Error de sesión temporal: Por favor vuelve a Búsqueda y entra desde allí para obtener turno en la cola.';
+        this.mensajeError = 'Error de sesión. Por favor vuelve a Búsqueda.';
+      }
+      if (!this.userToken) {
+        this.mensajeError = 'No has iniciado sesión. Vuelve al inicio.';
       }
     }
+  }
+
+  get precioTotal(): number {
+    return this.entradasSeleccionadas.reduce((sum, ent) => sum + ent.precio, 0);
   }
 
   ngAfterViewInit(): void {
@@ -68,7 +82,19 @@ export class CompraComponent implements OnInit, AfterViewInit {
         setTimeout(() => {
           this.cargarDatos();
         }, 10);
+        // Keep-alive: pingamos la cola cada 10 segundos para no perder el turno
+        // cuando el usuario navegó a auth y vuelve a esta página
+        this.keepAliveTimer = setInterval(() => {
+          this.http.get<any>(`http://localhost:8080/compras/check?sessionId=${this.sessionId}`).subscribe();
+        }, 10000);
       }
+    }
+  }
+
+  // Cancela el keep-alive al salir de la página (no dejamos timers sueltos)
+  ngOnDestroy(): void {
+    if (this.keepAliveTimer) {
+      clearInterval(this.keepAliveTimer);
     }
   }
 
@@ -96,11 +122,10 @@ export class CompraComponent implements OnInit, AfterViewInit {
   }
 
   preReservar(ent: Entrada) {
-    if (this.entradaSeleccionada) return; // Evitar seleccionar más de una
     this.taquillaService.preReservar(this.sessionId, ent.id).subscribe({
       next: (res) => {
         ent.estado = 'RESERVADA';
-        this.entradaSeleccionada = ent;
+        this.entradasSeleccionadas.push(ent);
         this.mensajeError = '';
         this.cdRef.detectChanges();
       },
@@ -111,14 +136,16 @@ export class CompraComponent implements OnInit, AfterViewInit {
     });
   }
 
-  cancelarSeleccion() {
-    if (!this.entradaSeleccionada) return;
-    this.taquillaService.cancelarReserva(this.sessionId, this.entradaSeleccionada.id).subscribe({
+  cancelarSeleccion(ent: Entrada) {
+    this.taquillaService.cancelarReserva(this.sessionId, ent.id).subscribe({
       next: (res) => {
         // Volver a poner la entrada en verde
-        let ent = this.entradas.find(e => e.id === this.entradaSeleccionada!.id);
-        if (ent) ent.estado = 'DISPONIBLE';
-        this.entradaSeleccionada = null;
+        let match = this.entradas.find(e => e.id === ent.id);
+        if (match) match.estado = 'DISPONIBLE';
+        
+        // Eliminar del carrito
+        this.entradasSeleccionadas = this.entradasSeleccionadas.filter(e => e.id !== ent.id);
+        
         this.mensajeError = '';
         this.cdRef.detectChanges();
       },
@@ -129,25 +156,27 @@ export class CompraComponent implements OnInit, AfterViewInit {
     });
   }
 
+  estaSeleccionada(id: number): boolean {
+    return this.entradasSeleccionadas.some(e => e.id === id);
+  }
+
   confirmarPago() {
-    // Simulamos el inicio de sesión para obtener el token desde EsiUsuarios
-    this.taquillaService.loginEsiusuarios(this.loginName, this.loginPwd).subscribe({
-      next: (userToken) => {
-        // Con el token de usuario, confirmamos la compra en EsiEntradas
-        this.taquillaService.confirmarCompra(this.sessionId, userToken).subscribe({
-          next: (res) => {
-            this.compraCompletada = true;
-            this.mensajeError = '';
-            this.cdRef.detectChanges();
-          },
-          error: (err) => {
-            this.mensajeError = 'Error confirmando el pago. El token podría no ser válido o la reserva caducó.';
-            this.cdRef.detectChanges();
-          }
-        });
+    if (!this.userToken) {
+      // No está logeado → guardar la URL actual y mandarlo al login
+      sessionStorage.setItem('auth_returnUrl', `/compra/${this.espectaculoId}`);
+      this.router.navigate(['/auth']);
+      return;
+    }
+    // Tiene token → confirmar la compra directamente
+    this.taquillaService.confirmarCompra(this.sessionId, this.userToken).subscribe({
+      next: (res) => {
+        this.compraCompletada = true;
+        this.entradasSeleccionadas = [];
+        this.mensajeError = '';
+        this.cdRef.detectChanges();
       },
       error: (err) => {
-        this.mensajeError = 'Credenciales de EsiUsuarios incorrectas. No se pudo iniciar sesión.';
+        this.mensajeError = 'Error confirmando el pago. La reserva puede haber caducado.';
         this.cdRef.detectChanges();
       }
     });
