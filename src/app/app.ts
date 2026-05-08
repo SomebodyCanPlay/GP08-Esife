@@ -2,15 +2,21 @@ import { Component, OnInit } from '@angular/core';
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs/operators';
+import { TaquillaService } from './services/taquilla.service';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule],
+  imports: [RouterOutlet, CommonModule, FormsModule],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
 export class App implements OnInit {
+
+  // Variables para el formulario de baja
+  mostrarFormBaja: boolean = false;
+  passConfirmacion: string = '';
 
   // ¿Está el usuario logeado? Lo sabemos mirando el sessionStorage
   estaLogeado: boolean = false;
@@ -19,7 +25,10 @@ export class App implements OnInit {
   // Ocultamos la navbar en la pantalla de auth para que no quede raro
   mostrarNavbar: boolean = true;
 
-  constructor(public router: Router) {}
+  constructor(
+    public router: Router,
+    private taquillaService: TaquillaService
+  ) {}
 
   ngOnInit() {
     this.actualizarEstadoLogin();
@@ -59,10 +68,42 @@ export class App implements OnInit {
   }
 
   cerrarSesion() {
+    const token = sessionStorage.getItem('esiusuarios_token');
+    if (token) {
+      // Avisamos al backend para que invalide el token en la BD
+      this.taquillaService.logoutEsiusuarios(token).subscribe({
+        next: () => console.log('Sesión cerrada en el servidor'),
+        error: (err) => console.error('Error cerrando sesión en servidor', err)
+      });
+    }
+
+    // Limpiamos el navegador
     sessionStorage.removeItem('esiusuarios_token');
     sessionStorage.removeItem('esiusuarios_email');
     this.estaLogeado = false;
     this.emailUsuario = '';
     this.router.navigate(['/']);
+  }
+
+  // Nueva función para dar de baja al usuario
+  ejecutarBaja() {
+    if (!this.passConfirmacion) {
+      alert('Debes introducir la contraseña para confirmar la baja.');
+      return;
+    }
+
+    if (confirm('¿Estás seguro de que quieres cancelar tu cuenta? Esta acción no se puede deshacer.')) {
+      this.taquillaService.cancelarCuenta(this.emailUsuario, this.passConfirmacion).subscribe({
+        next: () => {
+          alert('Cuenta cancelada correctamente.');
+          this.mostrarFormBaja = false;
+          this.passConfirmacion = '';
+          this.cerrarSesion();
+        },
+        error: (err) => {
+          alert('Error: ' + (err.error || 'Contraseña incorrecta'));
+        }
+      });
+    }
   }
 }

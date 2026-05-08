@@ -17,7 +17,21 @@
     <!-- Usuario SÍ logeado → muestra email y botón de salir -->
     <ng-container *ngIf="estaLogeado">
       <span class="nav-user">👤 {{ nombreCorto }}</span>
-      <button class="btn-nav-ghost" (click)="cerrarSesion()">Cerrar sesión</button>
+
+      <button class="btn-nav-ghost" (click)="mostrarFormBaja = !mostrarFormBaja">
+        Cancelar cuenta
+      </button>
+
+      <div *ngIf="mostrarFormBaja" class="panel-confirmacion">
+        <p>¿Estás seguro? Introduce tu contraseña:</p>
+        <input type="password" [(ngModel)]="passConfirmacion" placeholder="Contraseña" class="input-mini">
+        <div class="acciones">
+          <button class="btn-confirmar" (click)="ejecutarBaja()">Confirmar y borrar</button>
+          <button class="btn-volver" (click)="mostrarFormBaja = false">Volver</button>
+        </div>
+      </div>
+
+      <button class="btn-nav-danger" (click)="cerrarSesion()">Cerrar sesión</button>
     </ng-container>
   </div>
 </nav>

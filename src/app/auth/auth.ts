@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -56,8 +56,9 @@ export class AuthComponent implements OnInit {
   constructor(
     private taquillaService: TaquillaService,
     private router: Router,
-    private route: ActivatedRoute
-  ) {}
+    private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit() {
     // Si ya hay sesión activa → saltar el login directamente
@@ -127,7 +128,7 @@ export class AuthComponent implements OnInit {
   // Se usa antes de llamar al servidor para registrarse
   get passwordCompleta(): boolean {
     return this.pwdTieneMinimo && this.pwdTieneMayuscula &&
-           this.pwdTieneMinuscula && this.pwdTieneEspecial;
+      this.pwdTieneMinuscula && this.pwdTieneEspecial;
   }
 
   // ============================================================
@@ -143,22 +144,29 @@ export class AuthComponent implements OnInit {
 
     this.taquillaService.loginEsiusuarios(this.loginEmail, this.loginPwd).subscribe({
       next: (token) => {
-        // Guardamos el token y el email en sessionStorage
         sessionStorage.setItem('esiusuarios_token', token);
         sessionStorage.setItem('esiusuarios_email', this.loginEmail);
         this.cargando = false;
-        // Volver a la URL de origen (ej: /compra/3) o al inicio
         const returnUrl = sessionStorage.getItem('auth_returnUrl') || '/';
         sessionStorage.removeItem('auth_returnUrl');
         this.router.navigateByUrl(returnUrl);
       },
       error: (err) => {
-        this.cargando = false;
-        if (err.status === 401) {
-          this.mensajeError = 'Email o contraseña incorrectos.';
-        } else {
-          this.mensajeError = 'Error conectando con el servidor. Inténtalo de nuevo.';
-        }
+        // Usamos setTimeout para asegurar que Angular se entera del cambio
+        setTimeout(() => {
+          this.cargando = false;
+          console.log('Error capturado:', err);
+
+          if (err.status === 401) {
+            this.mensajeError = 'Email o contraseña incorrectos.';
+          } else if (err.status === 0) {
+            this.mensajeError = 'Servidor de usuarios no disponible (8081).';
+          } else {
+            this.mensajeError = 'Error de conexión: ' + (err.statusText || 'Desconocido');
+          }
+
+          this.cdr.detectChanges();
+        }, 0);
       }
     });
   }
@@ -203,8 +211,10 @@ export class AuthComponent implements OnInit {
       },
       error: (err) => {
         this.cargando = false;
-        if (err.status === 400) {
-          this.mensajeError = 'El email ya está registrado o los datos son incorrectos.';
+        // El backend manda el motivo exacto en el cuerpo del error (err.error)
+        // Ejemplos: "El email ya está registrado", "El email no puede estar vacío"...
+        if (err.status === 400 && err.error) {
+          this.mensajeError = err.error;
         } else {
           this.mensajeError = 'Error al crear la cuenta. Inténtalo de nuevo.';
         }
@@ -229,12 +239,14 @@ export class AuthComponent implements OnInit {
         this.mensajeExito = '📧 Si el email existe, recibirás un código en tu bandeja de entrada.';
         // Pasamos al formulario del código
         this.pantalla = 'codigoRecuperacion';
+        this.cdr.detectChanges();
       },
       error: () => {
         this.cargando = false;
         // Mostramos el mismo mensaje (no revelamos si el email existe)
         this.mensajeExito = '📧 Si el email existe, recibirás un código en tu bandeja de entrada.';
         this.pantalla = 'codigoRecuperacion';
+        this.cdr.detectChanges();
       }
     });
   }
@@ -249,16 +261,29 @@ export class AuthComponent implements OnInit {
     }
     this.cargando = true;
     this.mensajeError = '';
+    this.mensajeExito = '';
+    console.log("Enviando petición para restablecer contraseña...");
 
     this.taquillaService.restablecerPassword(this.recCodigo, this.recNuevaPassword).subscribe({
-      next: () => {
+      next: (res) => {
+        console.log("Servidor respondió OK:", res);
         this.cargando = false;
         this.mensajeExito = '✅ Contraseña actualizada correctamente. Ya puedes iniciar sesión.';
-        setTimeout(() => this.mostrar('login'), 2000);
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.mostrar('login');
+          this.cdr.detectChanges();
+        }, 2000);
       },
       error: (err) => {
+        console.error("Error en el servidor:", err);
         this.cargando = false;
-        this.mensajeError = 'Código incorrecto o caducado. Solicita uno nuevo.';
+        // Aquí leemos el mensaje que envía tu Java en el catch
+        // Java envía el error en 'err.error'
+        this.mensajeError = err.error || 'El código es incorrecto o ha caducado.';
+
+        console.error("Detalle del error:", err);
+        this.cdr.detectChanges();
       }
     });
   }

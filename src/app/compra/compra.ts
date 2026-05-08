@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -44,6 +44,18 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
   // El token se recupera del sessionStorage (el usuario ya hizo login en la pantalla de auth)
   userToken: string = '';
 
+  // ── Flujo de pago en 2 pasos ──
+  mostrarFormularioPago: boolean = false; // true cuando el usuario pulsa "Ir al Pago"
+  totalCentimos: number = 0;             // total calculado por el backend al iniciar pago
+
+  // Campos del formulario de tarjeta
+  tarjetaNumero: string = '';
+  tarjetaCaducidad: string = '';  // formato MM/AA
+  tarjetaCvc: string = '';
+  tarjetaNombre: string = '';     // nombre del titular
+  errorTarjeta: string = '';      // mensaje de error de validación
+  procesandoPago: boolean = false;
+
   // Timer para el keep-alive de la cola (se cancela al salir de la página)
   private keepAliveTimer: any = null;
 
@@ -53,8 +65,33 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
     private router: Router,
     private cdRef: ChangeDetectorRef,
     private taquillaService: TaquillaService
-  ) {}
+  ) { }
 
+  // Esto detecta si el usuario le da a la "X" de cerrar la pestaña
+  @HostListener('window:beforeunload', ['$event'])
+  unloadNotification($event: any) {
+    this.avisarSalidaInstantanea();
+  }
+
+  // Esto detecta si el usuario le da a la flecha de "Atrás" o a otro enlace
+  ngOnDestroy(): void {
+    // 1. Limpiamos el temporizador para que no siga ejecutándose en segundo plano
+    if (this.keepAliveTimer) {
+      clearInterval(this.keepAliveTimer);
+    }
+
+    // 2. Lanzamos el aviso instantáneo a Java para liberar el hueco en la cola
+    this.avisarSalidaInstantanea();
+  }
+
+  avisarSalidaInstantanea() {
+    if (this.sessionId) {
+      // Usamos sendBeacon: es un misil que el navegador lanza al servidor
+      // incluso si la pestaña ya se está cerrando o muriendo.
+      const url = `http://localhost:8080/cola/abandonar?sessionId=${this.sessionId}`;
+      navigator.sendBeacon(url);
+    }
+  }
   ngOnInit(): void {
     if (typeof window !== 'undefined' && window.sessionStorage) {
       this.sessionId = sessionStorage.getItem('taquilla_sessionId') || '';
@@ -66,9 +103,8 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
       if (!this.sessionId) {
         this.mensajeError = 'Error de sesión. Por favor vuelve a Búsqueda.';
       }
-      if (!this.userToken) {
-        this.mensajeError = 'No has iniciado sesión. Vuelve al inicio.';
-      }
+      // No bloqueamos con mensaje de error aquí si no hay token, 
+      // porque el usuario puede querer ver las entradas antes de loguearse.
     }
   }
 
@@ -91,19 +127,26 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  // Cancela el keep-alive al salir de la página (no dejamos timers sueltos)
-  ngOnDestroy(): void {
-    if (this.keepAliveTimer) {
-      clearInterval(this.keepAliveTimer);
-    }
-  }
 
   cargarDatos() {
+    // 1. Cargamos todas las entradas del espectáculo
     this.http.get<Entrada[]>(`http://localhost:8080/busqueda/getEntradas?espectaculoid=${this.espectaculoId}&sessionId=${this.sessionId}`)
       .subscribe({
         next: (data) => {
           this.entradas = data;
-          this.cdRef.detectChanges();
+          this.cdRef.detectChanges(); // Pintamos las entradas YA
+
+          // 2. Intentamos recuperar el carrito (si falla, no pasa nada, se ven las entradas igual)
+          this.http.get<number[]>(`http://localhost:8080/compras/misReservas?sessionId=${this.sessionId}`)
+            .subscribe({
+              next: (misIds) => {
+                if (misIds && misIds.length > 0) {
+                  this.entradasSeleccionadas = this.entradas.filter(e => misIds.includes(e.id));
+                  this.cdRef.detectChanges();
+                }
+              },
+              error: (err) => console.warn("Aún no se puede recuperar el carrito (reinicio pendiente):", err)
+            });
         },
         error: (err) => {
           this.manejarError(err);
@@ -142,10 +185,10 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
         // Volver a poner la entrada en verde
         let match = this.entradas.find(e => e.id === ent.id);
         if (match) match.estado = 'DISPONIBLE';
-        
+
         // Eliminar del carrito
         this.entradasSeleccionadas = this.entradasSeleccionadas.filter(e => e.id !== ent.id);
-        
+
         this.mensajeError = '';
         this.cdRef.detectChanges();
       },
@@ -160,27 +203,115 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.entradasSeleccionadas.some(e => e.id === id);
   }
 
-  confirmarPago() {
+  // PASO 1: El usuario pulsa "Ir al Pago"
+  irAlPago() {
+    console.log("Intentando ir al pago...");
     if (!this.userToken) {
-      // No está logeado → guardar la URL actual y mandarlo al login
+      console.log("No hay token, guardando returnUrl y redirigiendo a /auth");
       sessionStorage.setItem('auth_returnUrl', `/compra/${this.espectaculoId}`);
       this.router.navigate(['/auth']);
       return;
     }
-    // Tiene token → confirmar la compra directamente
-    this.taquillaService.confirmarCompra(this.sessionId, this.userToken).subscribe({
+
+    if (this.entradasSeleccionadas.length === 0) {
+      this.mensajeError = 'Tu carrito está vacío.';
+      return;
+    }
+
+    console.log("Llamando a iniciarPago con sessionId:", this.sessionId);
+    this.taquillaService.iniciarPago(this.sessionId, this.userToken).subscribe({
       next: (res) => {
-        this.compraCompletada = true;
-        this.entradasSeleccionadas = [];
+        console.log("Pago iniciado correctamente:", res);
+        this.totalCentimos = res.totalCentimos || 0;
+        this.mostrarFormularioPago = true;
         this.mensajeError = '';
         this.cdRef.detectChanges();
       },
       error: (err) => {
-        this.mensajeError = 'Error confirmando el pago. La reserva puede haber caducado.';
+        console.error("Error en iniciarPago:", err);
+        if (err.status === 403) {
+          this.mensajeError = 'Tu sesión de reserva ha caducado. Por favor, selecciona las entradas de nuevo.';
+        } else if (err.status === 401) {
+          this.mensajeError = 'Tu sesión ha caducado. Por favor, inicia sesión de nuevo.';
+        } else if (err.status === 404) {
+          this.mensajeError = 'El servidor dice que no hay reservas activas en tu carrito (404). Por favor, quita la entrada y vuelve a seleccionarla.';
+        } else {
+          this.mensajeError = `Error del servidor (${err.status}): ${err.error?.message || err.error?.error || 'Inténtalo de nuevo.'}`;
+        }
         this.cdRef.detectChanges();
       }
     });
   }
+
+  // Formatea el número de tarjeta con espacios cada 4 dígitos mientras el usuario escribe
+  // Ejemplo: "1234567812345678" → "1234 5678 1234 5678"
+  formatearNumeroTarjeta(event: any) {
+    let val = event.target.value.replace(/\D/g, '').substring(0, 16);
+    this.tarjetaNumero = val.replace(/(\d{4})(?=\d)/g, '$1 ');
+  }
+
+  // Formatea la fecha de caducidad como MM/AA mientras el usuario escribe
+  formatearCaducidad(event: any) {
+    let val = event.target.value.replace(/\D/g, '').substring(0, 4);
+    if (val.length > 2) val = val.substring(0, 2) + '/' + val.substring(2);
+    this.tarjetaCaducidad = val;
+  }
+
+  // Valida los datos de la tarjeta antes de enviar
+  // Para la demo acepta cualquier número de 16 dígitos, CVC de 3 y fecha válida
+  validarTarjeta(): boolean {
+    const numero = this.tarjetaNumero.replace(/\s/g, '');
+    if (numero.length !== 16) {
+      this.errorTarjeta = 'El número de tarjeta debe tener 16 dígitos';
+      return false;
+    }
+    if (!/^\d{2}\/\d{2}$/.test(this.tarjetaCaducidad)) {
+      this.errorTarjeta = 'La fecha debe tener el formato MM/AA';
+      return false;
+    }
+    const [mes, anio] = this.tarjetaCaducidad.split('/').map(Number);
+    const ahora = new Date();
+    const anioCompleto = 2000 + anio;
+    if (mes < 1 || mes > 12 || anioCompleto < ahora.getFullYear() ||
+      (anioCompleto === ahora.getFullYear() && mes < ahora.getMonth() + 1)) {
+      this.errorTarjeta = 'La tarjeta ha caducado o la fecha no es válida';
+      return false;
+    }
+    if (!/^\d{3,4}$/.test(this.tarjetaCvc)) {
+      this.errorTarjeta = 'El CVC debe tener 3 dígitos';
+      return false;
+    }
+    if (!this.tarjetaNombre.trim()) {
+      this.errorTarjeta = 'Introduce el nombre del titular';
+      return false;
+    }
+    this.errorTarjeta = '';
+    return true;
+  }
+
+  // PASO 2: El usuario ha rellenado la tarjeta y pulsa "Pagar"
+  // El backend actualiza los pagos de PENDIENTE a COMPLETADO
+  procesarPago() {
+    if (!this.validarTarjeta()) return;
+
+    this.procesandoPago = true;
+    this.taquillaService.confirmarCompra(this.sessionId, this.userToken).subscribe({
+      next: (res) => {
+        this.compraCompletada = true;
+        this.mostrarFormularioPago = false;
+        this.entradasSeleccionadas = [];
+        this.mensajeError = '';
+        this.procesandoPago = false;
+        this.cdRef.detectChanges();
+      },
+      error: (err) => {
+        this.mensajeError = 'Error procesando el pago. La reserva puede haber caducado.';
+        this.procesandoPago = false;
+        this.cdRef.detectChanges();
+      }
+    });
+  }
+
 
   manejarError(err: any) {
     if (err.status === 403) {

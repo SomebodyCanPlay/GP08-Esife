@@ -303,3 +303,146 @@
 .theme-dark.container {
   padding-top: 30px;
 }
+
+/* ═══════════════════════════════════════════════════
+   FORMULARIO DE TARJETA DE CRÉDITO
+   ═══════════════════════════════════════════════════ */
+.card-form {
+  background: linear-gradient(135deg, #1a1f2e, #161b22);
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 5px;
+}
+
+.card-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #21262d;
+}
+
+.card-logo { font-size: 1.4rem; }
+
+.card-title {
+  font-weight: 600;
+  color: #c9d1d9;
+  font-size: 1rem;
+}
+
+.card-total {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #3fb950;
+}
+
+.card-field {
+  margin-bottom: 14px;
+}
+
+.card-field label {
+  display: block;
+  font-size: 0.78rem;
+  color: #8b949e;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-input {
+  width: 100%;
+  padding: 10px 12px;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  color: #c9d1d9;
+  font-size: 1rem;
+  font-family: 'Courier New', monospace;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.card-input:focus {
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+}
+
+.card-input.input-err { border-color: #f85149; }
+
+/* Caducidad + CVC en fila */
+.card-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Error de validación */
+.card-error {
+  background-color: rgba(248, 81, 73, 0.1);
+  color: #ff7b72;
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 0.9rem;
+  margin-bottom: 14px;
+}
+
+/* Botón "Pagar X €" */
+.btn-pagar {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(90deg, #238636, #2ea043);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  margin-bottom: 10px;
+}
+
+.btn-pagar:hover { opacity: 0.9; }
+.btn-pagar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Botón "← Volver al carrito" */
+.btn-cancelar-pago {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  color: #8b949e;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.btn-cancelar-pago:hover {
+  border-color: #58a6ff;
+  color: #c9d1d9;
+}
+
+.card-aviso {
+  text-align: center;
+  color: #8b949e;
+  font-size: 0.78rem;
+  margin-top: 12px;
+}
+
+/* Spinner para mientras procesa el pago */
+.spinner-small {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }

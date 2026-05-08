@@ -86,3 +86,52 @@
   opacity: 0.9;
   transform: translateY(-1px);
 }
+
+/* Botón de acción peligrosa (rojo, sin relleno) */
+.btn-nav-danger {
+  padding: 7px 16px;
+  background: transparent;
+  color: #f85149;
+  border: 1px solid #f85149;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+.btn-nav-danger:hover {
+  background-color: rgba(248, 81, 73, 0.1);
+  opacity: 0.9;
+}
+
+/* Estilos para el panel de baja */
+.panel-confirmacion {
+  position: absolute;
+  top: 65px;
+  right: 20px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  z-index: 1000;
+  width: 250px;
+}
+
+.panel-confirmacion p { font-size: 0.85rem; margin-bottom: 10px; color: #c9d1d9; }
+
+.input-mini {
+  width: 100%;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: white;
+  padding: 6px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  outline: none;
+}
+
+.acciones { display: flex; gap: 8px; }
+
+.btn-confirmar { background: #da3633; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+.btn-volver { background: #30363d; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }

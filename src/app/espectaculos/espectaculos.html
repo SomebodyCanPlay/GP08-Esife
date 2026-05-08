@@ -9,38 +9,30 @@
   </div>
 
   <div *ngIf="!enCola">
-    <!-- Buscador Opcional -->
     <div class="search-box">
-      <input 
-        type="text" 
-        [(ngModel)]="terminoBusqueda" 
-        (keyup.enter)="buscar()"
-        placeholder="Buscar por artista (opcional)" 
-        class="dark-input"
-      />
+      <input type="text" [(ngModel)]="terminoBusqueda" (keyup.enter)="buscar()"
+        placeholder="Buscar por artista (opcional)" class="dark-input" />
       <button (click)="buscar()" class="btn-primary">Buscar</button>
     </div>
 
-    <!-- Resultados Búsqueda (Si existen) -->
     <div *ngIf="espectaculos.length > 0" class="search-results">
       <h3 style="color: #fff; margin-bottom: 15px;">Resultados de la Búsqueda:</h3>
       <div class="results-grid">
         <div class="card" *ngFor="let esp of espectaculos">
           <h3>{{ esp.artista }}</h3>
           <p>Fecha: {{ esp.fecha | date:'dd/MM/yyyy HH:mm' }}</p>
-          <button [routerLink]="['/compra', esp.id]" class="btn-comprar">Ver Entradas</button>
+          <button (click)="entrarColaEspectaculo(esp.id)" class="btn-comprar">Ver Entradas</button>
         </div>
       </div>
     </div>
 
-    <!-- Botón Ver Espectáculos -->
     <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
-       <button class="btn-primary" style="font-size: 1.2rem; padding: 15px 40px;" (click)="verConciertos()" *ngIf="!mostrarEscenarios">
-         Ver Conciertos
-       </button>
+      <button class="btn-primary" style="font-size: 1.2rem; padding: 15px 40px;" (click)="verConciertos()"
+        *ngIf="!mostrarEscenarios">
+        Ver Conciertos
+      </button>
     </div>
 
-    <!-- Listado por Escenarios (Acordeones) -->
     <div *ngIf="mostrarEscenarios">
       <h2 class="section-title">Explorar por Recintos</h2>
       <div class="accordion-container">
@@ -52,7 +44,7 @@
             </div>
             <div class="toggle-icon">{{ esc.expanded ? '▼' : '▶' }}</div>
           </div>
-          
+
           <div class="accordion-content" *ngIf="esc.expanded">
             <div *ngIf="esc.espectaculos && esc.espectaculos.length === 0" class="no-data">
               No hay espectáculos programados en este recinto.
@@ -61,7 +53,7 @@
               <div *ngFor="let espectaculo of esc.espectaculos" class="card">
                 <h3>{{ espectaculo.artista }}</h3>
                 <p>Fecha: {{ espectaculo.fecha | date:'dd/MM/yyyy HH:mm' }}</p>
-                <button [routerLink]="['/compra', espectaculo.id]" class="btn-comprar">Ver Entradas</button>
+                <button (click)="entrarColaEspectaculo(espectaculo.id)" class="btn-comprar">Ver Entradas</button>
               </div>
             </div>
           </div>
@@ -70,28 +62,24 @@
     </div>
   </div>
 
-  <!-- Cola Virtual — se muestra mientras enCola = true -->
   <div *ngIf="enCola" class="cola-container">
     <div class="spinner"></div>
 
     <h2 style="color: #fff; margin-bottom: 10px;">Sala de Espera Virtual</h2>
     <p style="color: #8b949e; margin-bottom: 30px;">
-      El sistema solo permite {{ MAX_SIMULTANEOS }} compradores simultáneos para garantizar que las entradas no se agoten sin que puedas comprarlas.
+      El sistema solo permite {{ MAX_SIMULTANEOS }} compradores simultáneos para garantizar que las entradas no se
+      agoten sin que puedas comprarlas.
     </p>
 
-    <!-- Posición en la cola -->
     <div class="posicion-badge">
       <span class="posicion-numero">{{ posicionCola }}</span>
       <span class="posicion-label">Tu posición</span>
     </div>
 
-    <!-- Mensaje dinámico según posición -->
     <p class="cola-mensaje">{{ mensajeCola }}</p>
 
-    <!-- Tiempo estimado -->
     <p class="cola-tiempo">⏱ Tiempo estimado: <strong>{{ tiempoEstimado }}</strong></p>
 
-    <!-- Barra de progreso animada -->
     <div class="progress-bar-container">
       <div class="progress-bar-fill"></div>
     </div>

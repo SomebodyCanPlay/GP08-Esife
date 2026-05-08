@@ -9,7 +9,7 @@ export class TaquillaService {
   private apiUrl = 'http://localhost:8080';
   private esiusuariosUrl = 'http://localhost:8081';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   // ── RESERVAS (esientradas) ──
 
@@ -25,6 +25,15 @@ export class TaquillaService {
     });
   }
 
+  // Paso 3.5: El usuario pulsa "Ir al Pago" → crea pagos PENDIENTE en la BD
+  // Devuelve el total en céntimos y los IDs de los pagos creados
+  iniciarPago(sessionId: string, userToken: string): Observable<any> {
+    return this.http.post<any>(
+      `${this.apiUrl}/compras/iniciarPago?sessionId=${sessionId}`,
+      { token: userToken }
+    );
+  }
+
   confirmarCompra(sessionId: string, userToken: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/compras/confirmar?sessionId=${sessionId}`, {
       token: userToken
@@ -38,6 +47,13 @@ export class TaquillaService {
     return this.http.post(`${this.esiusuariosUrl}/users/login`, {
       email: email,
       pwd: pwd
+    }, { responseType: 'text' });
+  }
+
+  // Logout → avisa al backend para borrar el token de la BD
+  logoutEsiusuarios(token: string): Observable<string> {
+    return this.http.post(`${this.esiusuariosUrl}/users/logout`, {
+      token: token
     }, { responseType: 'text' });
   }
 
@@ -64,4 +80,14 @@ export class TaquillaService {
       nuevaPassword: nuevaPassword
     }, { responseType: 'text' });
   }
+  // ============================================================
+  // Cancelar Cuenta (Dar de baja)
+  // ============================================================
+  cancelarCuenta(email: string, pwd: string): Observable<string> {
+    return this.http.delete(`${this.esiusuariosUrl}/users/cancelarCuenta`, {
+      body: { email: email, pwd: pwd },
+      responseType: 'text'
+    });
+  }
+
 }
