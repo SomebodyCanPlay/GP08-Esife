@@ -24,7 +24,14 @@
 
       <div *ngIf="mostrarFormBaja" class="panel-confirmacion">
         <p>¿Estás seguro? Introduce tu contraseña:</p>
-        <input type="password" [(ngModel)]="passConfirmacion" placeholder="Contraseña" class="input-mini">
+        <div class="input-wrapper-mini">
+          <input [type]="mostrarPwdBaja ? 'text' : 'password'" 
+                 [(ngModel)]="passConfirmacion" 
+                 placeholder="Contraseña" class="input-mini">
+          <button type="button" class="btn-ojo-mini" (click)="mostrarPwdBaja = !mostrarPwdBaja">
+            {{ mostrarPwdBaja ? 'Ocultar' : 'Ver' }}
+          </button>
+        </div>
         <div class="acciones">
           <button class="btn-confirmar" (click)="ejecutarBaja()">Confirmar y borrar</button>
           <button class="btn-volver" (click)="mostrarFormBaja = false">Volver</button>

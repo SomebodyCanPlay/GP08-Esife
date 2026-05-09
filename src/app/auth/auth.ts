@@ -1,7 +1,8 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { TaquillaService } from '../services/taquilla.service';
 
 type Pantalla = 'login' | 'registro' | 'recuperar' | 'codigoRecuperacion';
@@ -13,7 +14,7 @@ type Pantalla = 'login' | 'registro' | 'recuperar' | 'codigoRecuperacion';
   templateUrl: './auth.html',
   styleUrls: ['./auth.css']
 })
-export class AuthComponent implements OnInit {
+export class AuthComponent implements OnInit, OnDestroy {
 
   // Pantalla activa ('login' al arrancar)
   pantalla: Pantalla = 'login';
@@ -32,6 +33,8 @@ export class AuthComponent implements OnInit {
   recEmail: string = '';
   recCodigo: string = '';
   recNuevaPassword: string = '';
+  recNuevaPasswordConfirm: string = ''; // Campo para repetir contraseña
+
 
   // Mensajes de estado
   mensajeExito: string = '';
@@ -43,6 +46,8 @@ export class AuthComponent implements OnInit {
   mostrarRegPwd: boolean = false;
   mostrarRegPwdConfirm: boolean = false;
   mostrarRecPwd: boolean = false;
+  mostrarRecPwdConfirm: boolean = false; // "Ojo" para el campo de repetición
+
 
   // Mensajes de validación del email (en tiempo real)
   errorEmail: string = '';
@@ -52,12 +57,17 @@ export class AuthComponent implements OnInit {
   pwdTieneMayuscula: boolean = false;   // Al menos una letra mayúscula (A-Z)
   pwdTieneMinuscula: boolean = false;   // Al menos una letra minúscula (a-z)
   pwdTieneEspecial: boolean = false;    // Al menos un número o carácter especial (!@#...)
+  
+  // Mantenimiento de cola
+  private keepAliveTimer: any = null;
+  private sessionId: string = '';
 
   constructor(
     private taquillaService: TaquillaService,
     private router: Router,
     private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private http: HttpClient
   ) { }
 
   ngOnInit() {
@@ -75,6 +85,22 @@ export class AuthComponent implements OnInit {
     if (pantalla === 'registro') {
       this.pantalla = 'registro';
       sessionStorage.removeItem('auth_pantalla');
+    }
+
+    // Mantenemos viva la sesión de la cola mientras el usuario se loguea
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      this.sessionId = sessionStorage.getItem('taquilla_sessionId') || '';
+      if (this.sessionId) {
+        this.keepAliveTimer = setInterval(() => {
+          this.http.get(`http://localhost:8080/compras/check?sessionId=${this.sessionId}`).subscribe();
+        }, 10000);
+      }
+    }
+  }
+
+  ngOnDestroy() {
+    if (this.keepAliveTimer) {
+      clearInterval(this.keepAliveTimer);
     }
   }
 
@@ -211,13 +237,21 @@ export class AuthComponent implements OnInit {
       },
       error: (err) => {
         this.cargando = false;
-        // El backend manda el motivo exacto en el cuerpo del error (err.error)
-        // Ejemplos: "El email ya está registrado", "El email no puede estar vacío"...
-        if (err.status === 400 && err.error) {
+        console.error("Error en registro:", err);
+        
+        // El backend de esiusuarios suele mandar el texto del error en err.error
+        // Si es un conflicto (409) o un error de datos (400), sacamos el mensaje
+        if (err.error && typeof err.error === 'string') {
           this.mensajeError = err.error;
+        } else if (err.error && err.error.message) {
+          this.mensajeError = err.error.message;
+        } else if (err.status === 409) {
+          this.mensajeError = 'Este email ya está registrado. Intenta iniciar sesión.';
         } else {
-          this.mensajeError = 'Error al crear la cuenta. Inténtalo de nuevo.';
+          this.mensajeError = 'No se pudo crear la cuenta. Revisa los datos o inténtalo más tarde.';
         }
+        
+        this.cdr.detectChanges();
       }
     });
   }
@@ -255,10 +289,21 @@ export class AuthComponent implements OnInit {
   // RECUPERAR CONTRASEÑA — Paso 2: usar el código para cambiar contraseña
   // ============================================================
   restablecerPassword() {
-    if (!this.recCodigo || !this.recNuevaPassword) {
-      this.mensajeError = 'Introduce el código y la nueva contraseña.';
+    if (!this.recCodigo || !this.recNuevaPassword || !this.recNuevaPasswordConfirm) {
+      this.mensajeError = 'Por favor, rellena todos los campos.';
       return;
     }
+
+    if (this.recNuevaPassword !== this.recNuevaPasswordConfirm) {
+      this.mensajeError = 'Las contraseñas no coinciden.';
+      return;
+    }
+
+    if (!this.passwordCompleta) {
+      this.mensajeError = 'La contraseña no cumple con los requisitos de seguridad.';
+      return;
+    }
+
     this.cargando = true;
     this.mensajeError = '';
     this.mensajeExito = '';
@@ -266,23 +311,28 @@ export class AuthComponent implements OnInit {
 
     this.taquillaService.restablecerPassword(this.recCodigo, this.recNuevaPassword).subscribe({
       next: (res) => {
-        console.log("Servidor respondió OK:", res);
+        console.log("PAGO: Restablecer OK", res);
         this.cargando = false;
         this.mensajeExito = '✅ Contraseña actualizada correctamente. Ya puedes iniciar sesión.';
         this.cdr.detectChanges();
+        
+        // Esperamos 2 segundos para que el usuario vea el mensaje y volvemos al login
         setTimeout(() => {
           this.mostrar('login');
           this.cdr.detectChanges();
-        }, 2000);
+        }, 2500);
       },
       error: (err) => {
-        console.error("Error en el servidor:", err);
         this.cargando = false;
-        // Aquí leemos el mensaje que envía tu Java en el catch
-        // Java envía el error en 'err.error'
-        this.mensajeError = err.error || 'El código es incorrecto o ha caducado.';
-
-        console.error("Detalle del error:", err);
+        console.error("Error en restablecerPassword:", err);
+        
+        // Intentamos sacar el mensaje de error del servidor
+        if (err.error && typeof err.error === 'string') {
+          this.mensajeError = err.error;
+        } else {
+          this.mensajeError = 'El código es incorrecto o ha caducado. Inténtalo de nuevo.';
+        }
+        
         this.cdr.detectChanges();
       }
     });

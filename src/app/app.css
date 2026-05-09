@@ -125,10 +125,35 @@
   background: #0d1117;
   border: 1px solid #30363d;
   color: white;
-  padding: 6px;
+  padding: 8px 30px 8px 10px;
   border-radius: 4px;
-  margin-bottom: 10px;
   outline: none;
+  font-size: 0.9rem;
+}
+
+.input-wrapper-mini {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.btn-ojo-mini {
+  position: absolute;
+  right: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #58a6ff;
+  text-transform: uppercase;
+  user-select: none;
+  padding: 4px;
+}
+
+.btn-ojo-mini:hover {
+  color: #79c0ff;
 }
 
 .acciones { display: flex; gap: 8px; }

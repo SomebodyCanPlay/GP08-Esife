@@ -169,17 +169,21 @@
       </div>
     </div>
 
-    <!-- ════════ RECUPERAR CONTRASEÑA — Paso 2 ════════ -->
+    <!-- ════════ RECUPERAR CONTRASEÑA — Paso 2: Restablecer ════════ -->
     <div *ngIf="pantalla === 'codigoRecuperacion'">
       <h2 class="form-title">Nueva contraseña</h2>
+      <p style="color: #8b949e; font-size: 0.95rem; margin-bottom: 20px;">
+        Introduce el código que has recibido y tu nueva contraseña.
+      </p>
 
-      <div *ngIf="mensajeExito" class="msg-exito">{{ mensajeExito }}</div>
       <div *ngIf="mensajeError" class="msg-error">{{ mensajeError }}</div>
+      <div *ngIf="mensajeExito" class="msg-exito">{{ mensajeExito }}</div>
 
+      <!-- Código de recuperación -->
       <div class="form-group">
-        <label>Código recibido por email</label>
+        <label>Código de verificación</label>
         <input type="text" [(ngModel)]="recCodigo"
-               placeholder="Pega aquí el código" class="input-field">
+               placeholder="123456" class="input-field">
       </div>
 
       <!-- Nueva contraseña con ojo -->
@@ -188,24 +192,58 @@
         <div class="input-wrapper">
           <input [type]="mostrarRecPwd ? 'text' : 'password'"
                  [(ngModel)]="recNuevaPassword"
-                 (keyup.enter)="restablecerPassword()"
-                 placeholder="Mínimo 6 caracteres" class="input-field input-with-eye">
+                 (input)="validarPassword(recNuevaPassword)"
+                 placeholder="Mínimo 6 caracteres" class="input-field input-with-eye"
+                 [class.input-error]="recNuevaPassword && !passwordCompleta">
           <button type="button" class="btn-ojo" (click)="mostrarRecPwd = !mostrarRecPwd"
                   [title]="mostrarRecPwd ? 'Ocultar' : 'Mostrar'">
             {{ mostrarRecPwd ? 'Ocultar' : 'Ver' }}
           </button>
         </div>
+
+        <!-- Checklist visual — idéntica a la de registro -->
+        <div class="pwd-checklist" *ngIf="recNuevaPassword">
+          <span [class.req-ok]="pwdTieneMinimo" [class.req-fail]="!pwdTieneMinimo">
+            {{ pwdTieneMinimo ? '✅' : '❌' }} Mínimo 6 caracteres
+          </span>
+          <span [class.req-ok]="pwdTieneMayuscula" [class.req-fail]="!pwdTieneMayuscula">
+            {{ pwdTieneMayuscula ? '✅' : '❌' }} Una letra mayúscula (A-Z)
+          </span>
+          <span [class.req-ok]="pwdTieneMinuscula" [class.req-fail]="!pwdTieneMinuscula">
+            {{ pwdTieneMinuscula ? '✅' : '❌' }} Una letra minúscula (a-z)
+          </span>
+          <span [class.req-ok]="pwdTieneEspecial" [class.req-fail]="!pwdTieneEspecial">
+            {{ pwdTieneEspecial ? '✅' : '❌' }} Un número o carácter especial (!@#$...)
+          </span>
+        </div>
       </div>
 
-      <button class="btn-main" (click)="restablecerPassword()" [disabled]="cargando">
+      <!-- Repetir nueva contraseña con ojo -->
+      <div class="form-group">
+        <label>Repite la nueva contraseña</label>
+        <div class="input-wrapper">
+          <input [type]="mostrarRecPwdConfirm ? 'text' : 'password'"
+                 [(ngModel)]="recNuevaPasswordConfirm"
+                 (keyup.enter)="restablecerPassword()"
+                 placeholder="Repite la contraseña" class="input-field input-with-eye"
+                 [class.input-error]="recNuevaPasswordConfirm && recNuevaPassword !== recNuevaPasswordConfirm">
+          <button type="button" class="btn-ojo" (click)="mostrarRecPwdConfirm = !mostrarRecPwdConfirm"
+                  [title]="mostrarRecPwdConfirm ? 'Ocultar' : 'Mostrar'">
+            {{ mostrarRecPwdConfirm ? 'Ocultar' : 'Ver' }}
+          </button>
+        </div>
+        <span class="field-error" *ngIf="recNuevaPasswordConfirm && recNuevaPassword !== recNuevaPasswordConfirm">
+          ⚠ Las contraseñas no coinciden
+        </span>
+      </div>
+
+      <button class="btn-main" (click)="restablecerPassword()" [disabled]="cargando || !passwordCompleta">
         <span *ngIf="!cargando">Cambiar contraseña →</span>
         <span *ngIf="cargando" class="spinner-btn"></span>
       </button>
 
       <div class="auth-links">
-        <a (click)="mostrar('recuperar')">No recibí el código</a>
-        <span>·</span>
-        <a (click)="mostrar('login')">← Volver</a>
+        <a (click)="mostrar('login')">← Volver al login</a>
       </div>
     </div>
 

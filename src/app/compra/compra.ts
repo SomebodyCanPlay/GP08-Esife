@@ -55,6 +55,8 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
   tarjetaNombre: string = '';     // nombre del titular
   errorTarjeta: string = '';      // mensaje de error de validación
   procesandoPago: boolean = false;
+  compraCompletadaError: boolean = false; // Nueva variable para controlar errores críticos
+
 
   // Timer para el keep-alive de la cola (se cancela al salir de la página)
   private keepAliveTimer: any = null;
@@ -80,8 +82,7 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
       clearInterval(this.keepAliveTimer);
     }
 
-    // 2. Lanzamos el aviso instantáneo a Java para liberar el hueco en la cola
-    this.avisarSalidaInstantanea();
+
   }
 
   avisarSalidaInstantanea() {
@@ -101,10 +102,12 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
       this.userToken = sessionStorage.getItem('esiusuarios_token') || '';
 
       if (!this.sessionId) {
+        console.error("COMPRA: No hay sessionId en sessionStorage");
         this.mensajeError = 'Error de sesión. Por favor vuelve a Búsqueda.';
+      } else {
+        console.log("COMPRA: Iniciando carga inicial en ngOnInit...", {id: this.espectaculoId, session: this.sessionId});
+        this.cargarDatos();
       }
-      // No bloqueamos con mensaje de error aquí si no hay token, 
-      // porque el usuario puede querer ver las entradas antes de loguearse.
     }
   }
 
@@ -114,12 +117,16 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     if (typeof window !== 'undefined' && window.sessionStorage) {
-      if (!isNaN(this.espectaculoId) && this.sessionId) {
+      if (this.sessionId) {
+        // Segundo intento de carga por si el primero falló por timing
         setTimeout(() => {
-          this.cargarDatos();
-        }, 10);
-        // Keep-alive: pingamos la cola cada 10 segundos para no perder el turno
-        // cuando el usuario navegó a auth y vuelve a esta página
+          if (this.entradas.length === 0 && !this.mensajeError) {
+            console.log("COMPRA: Re-intentando carga en ngAfterViewInit...");
+            this.cargarDatos();
+          }
+        }, 500);
+
+        // Keep-alive: pingamos la cola cada 10 segundos
         this.keepAliveTimer = setInterval(() => {
           this.http.get<any>(`http://localhost:8080/compras/check?sessionId=${this.sessionId}`).subscribe();
         }, 10000);
@@ -129,12 +136,16 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
 
 
   cargarDatos() {
-    // 1. Cargamos todas las entradas del espectáculo
+    if (!this.espectaculoId || !this.sessionId) return;
+    
+    console.log("COMPRA: Llamando a getEntradas...");
     this.http.get<Entrada[]>(`http://localhost:8080/busqueda/getEntradas?espectaculoid=${this.espectaculoId}&sessionId=${this.sessionId}`)
       .subscribe({
         next: (data) => {
+          console.log("COMPRA: Entradas recibidas:", data.length);
           this.entradas = data;
-          this.cdRef.detectChanges(); // Pintamos las entradas YA
+          this.cdRef.markForCheck();
+          this.cdRef.detectChanges(); 
 
           // 2. Intentamos recuperar el carrito (si falla, no pasa nada, se ven las entradas igual)
           this.http.get<number[]>(`http://localhost:8080/compras/misReservas?sessionId=${this.sessionId}`)
@@ -167,9 +178,14 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
   preReservar(ent: Entrada) {
     this.taquillaService.preReservar(this.sessionId, ent.id).subscribe({
       next: (res) => {
+        // Cambiamos el estado de la entrada
         ent.estado = 'RESERVADA';
-        this.entradasSeleccionadas.push(ent);
+        
+        // CREAMOS una lista nueva para forzar a Angular a repintar
+        this.entradasSeleccionadas = [...this.entradasSeleccionadas, ent];
+        
         this.mensajeError = '';
+        this.cdRef.markForCheck();
         this.cdRef.detectChanges();
       },
       error: (err) => {
@@ -186,10 +202,11 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
         let match = this.entradas.find(e => e.id === ent.id);
         if (match) match.estado = 'DISPONIBLE';
 
-        // Eliminar del carrito
+        // CREAMOS una lista filtrada (nueva referencia)
         this.entradasSeleccionadas = this.entradasSeleccionadas.filter(e => e.id !== ent.id);
 
         this.mensajeError = '';
+        this.cdRef.markForCheck();
         this.cdRef.detectChanges();
       },
       error: (err) => {
@@ -221,22 +238,22 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
     console.log("Llamando a iniciarPago con sessionId:", this.sessionId);
     this.taquillaService.iniciarPago(this.sessionId, this.userToken).subscribe({
       next: (res) => {
-        console.log("Pago iniciado correctamente:", res);
+        console.log("PAGO: Iniciar pago OK", res);
         this.totalCentimos = res.totalCentimos || 0;
         this.mostrarFormularioPago = true;
         this.mensajeError = '';
+        this.errorTarjeta = ''; // Limpiamos errores previos de tarjeta
+        this.cdRef.markForCheck();
         this.cdRef.detectChanges();
       },
       error: (err) => {
-        console.error("Error en iniciarPago:", err);
+        console.error("PAGO: Error en iniciarPago:", err);
         if (err.status === 403) {
           this.mensajeError = 'Tu sesión de reserva ha caducado. Por favor, selecciona las entradas de nuevo.';
         } else if (err.status === 401) {
           this.mensajeError = 'Tu sesión ha caducado. Por favor, inicia sesión de nuevo.';
-        } else if (err.status === 404) {
-          this.mensajeError = 'El servidor dice que no hay reservas activas en tu carrito (404). Por favor, quita la entrada y vuelve a seleccionarla.';
         } else {
-          this.mensajeError = `Error del servidor (${err.status}): ${err.error?.message || err.error?.error || 'Inténtalo de nuevo.'}`;
+          this.mensajeError = `No se pudo iniciar el pago (${err.status}). Inténtalo de nuevo.`;
         }
         this.cdRef.detectChanges();
       }
@@ -299,13 +316,15 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
       next: (res) => {
         this.compraCompletada = true;
         this.mostrarFormularioPago = false;
+        this.compraCompletadaError = false;
         this.entradasSeleccionadas = [];
         this.mensajeError = '';
         this.procesandoPago = false;
         this.cdRef.detectChanges();
       },
       error: (err) => {
-        this.mensajeError = 'Error procesando el pago. La reserva puede haber caducado.';
+        console.error("Error en confirmarCompra:", err);
+        this.errorTarjeta = 'Error al confirmar la compra. El servidor no responde o la reserva ha caducado.';
         this.procesandoPago = false;
         this.cdRef.detectChanges();
       }
@@ -319,5 +338,9 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
     } else {
       this.mensajeError = 'Error cargando las entradas del servidor.';
     }
+  }
+
+  volverAEspectaculos() {
+    this.router.navigate(['/espectaculos']);
   }
 }

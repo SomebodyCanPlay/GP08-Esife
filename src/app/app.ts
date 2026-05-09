@@ -17,6 +17,8 @@ export class App implements OnInit {
   // Variables para el formulario de baja
   mostrarFormBaja: boolean = false;
   passConfirmacion: string = '';
+  mostrarPwdBaja: boolean = false; // "Ojo" para la contraseña de baja
+
 
   // ¿Está el usuario logeado? Lo sabemos mirando el sessionStorage
   estaLogeado: boolean = false;
