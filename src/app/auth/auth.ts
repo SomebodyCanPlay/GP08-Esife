@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { TaquillaService } from '../services/taquilla.service';
+import { environment } from '../environments/environment';
 
 type Pantalla = 'login' | 'registro' | 'recuperar' | 'codigoRecuperacion';
 
@@ -33,30 +34,28 @@ export class AuthComponent implements OnInit, OnDestroy {
   recEmail: string = '';
   recCodigo: string = '';
   recNuevaPassword: string = '';
-  recNuevaPasswordConfirm: string = ''; // Campo para repetir contraseña
-
+  recNuevaPasswordConfirm: string = ''; 
 
   // Mensajes de estado
   mensajeExito: string = '';
   mensajeError: string = '';
   cargando: boolean = false;
 
-  // Control de visibilidad de contraseñas (el "ojo")
+  // Control de visibilidad de contraseñas
   mostrarLoginPwd: boolean = false;
   mostrarRegPwd: boolean = false;
   mostrarRegPwdConfirm: boolean = false;
   mostrarRecPwd: boolean = false;
-  mostrarRecPwdConfirm: boolean = false; // "Ojo" para el campo de repetición
+  mostrarRecPwdConfirm: boolean = false; 
 
-
-  // Mensajes de validación del email (en tiempo real)
+  // Mensajes de validación del email
   errorEmail: string = '';
 
-  // Estado de cada requisito de la contraseña (para la checklist visual)
-  pwdTieneMinimo: boolean = false;      // Al menos 8 caracteres
-  pwdTieneMayuscula: boolean = false;   // Al menos una letra mayúscula (A-Z)
-  pwdTieneMinuscula: boolean = false;   // Al menos una letra minúscula (a-z)
-  pwdTieneEspecial: boolean = false;    // Al menos un número o carácter especial (!@#...)
+  // Estado de cada requisito de la contraseña
+  pwdTieneMinimo: boolean = false;      
+  pwdTieneMayuscula: boolean = false;   
+  pwdTieneMinuscula: boolean = false;   
+  pwdTieneEspecial: boolean = false;    
   
   // Mantenimiento de cola
   private keepAliveTimer: any = null;
@@ -71,7 +70,6 @@ export class AuthComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit() {
-    // Si ya hay sesión activa → saltar el login directamente
     const tokenExistente = sessionStorage.getItem('esiusuarios_token');
     if (tokenExistente) {
       const returnUrl = sessionStorage.getItem('auth_returnUrl') || '/';
@@ -80,19 +78,17 @@ export class AuthComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Si venimos del botón "Registrarse" del navbar → abrir ese formulario directamente
     const pantalla = sessionStorage.getItem('auth_pantalla');
     if (pantalla === 'registro') {
       this.pantalla = 'registro';
       sessionStorage.removeItem('auth_pantalla');
     }
 
-    // Mantenemos viva la sesión de la cola mientras el usuario se loguea
     if (typeof window !== 'undefined' && window.sessionStorage) {
       this.sessionId = sessionStorage.getItem('taquilla_sessionId') || '';
       if (this.sessionId) {
         this.keepAliveTimer = setInterval(() => {
-          this.http.get(`http://localhost:8080/compras/check?sessionId=${this.sessionId}`).subscribe();
+          this.http.get(`${environment.apiUrl}/compras/check?sessionId=${this.sessionId}`).subscribe();
         }, 10000);
       }
     }
@@ -104,7 +100,6 @@ export class AuthComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Cambia la pantalla visible y limpia los mensajes
   mostrar(pantalla: Pantalla) {
     this.pantalla = pantalla;
     this.mensajeError = '';
@@ -112,8 +107,6 @@ export class AuthComponent implements OnInit, OnDestroy {
     this.errorEmail = '';
   }
 
-  // Valida el formato del email mientras el usuario escribe
-  // Comprueba que tenga @ y al menos un punto después del @
   validarEmail(email: string): boolean {
     if (!email) {
       this.errorEmail = '';
@@ -137,29 +130,18 @@ export class AuthComponent implements OnInit, OnDestroy {
     return true;
   }
 
-  // Actualiza los 4 indicadores de la checklist de contraseña mientras el usuario escribe
-  // Se llama con (input)="validarPassword(regPwd)" en el HTML
   validarPassword(pwd: string) {
-    // Mínimo 6 caracteres
-    this.pwdTieneMinimo = pwd.length >= 6;
-    // Al menos una mayúscula: cualquier letra de A a Z (incluyendo acentuadas)
+    this.pwdTieneMinimo = pwd.length >= 8;
     this.pwdTieneMayuscula = /[A-ZÁÉÍÓÚÜÑ]/.test(pwd);
-    // Al menos una minúscula
     this.pwdTieneMinuscula = /[a-záéíóúüñ]/.test(pwd);
-    // Al menos un número O un carácter especial (!@#$%^&*...)
     this.pwdTieneEspecial = /[\d!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(pwd);
   }
 
-  // Comprueba si la contraseña cumple TODOS los requisitos
-  // Se usa antes de llamar al servidor para registrarse
   get passwordCompleta(): boolean {
     return this.pwdTieneMinimo && this.pwdTieneMayuscula &&
       this.pwdTieneMinuscula && this.pwdTieneEspecial;
   }
 
-  // ============================================================
-  // INICIAR SESIÓN
-  // ============================================================
   iniciarSesion() {
     if (!this.loginEmail || !this.loginPwd) {
       this.mensajeError = 'Por favor, rellena el email y la contraseña.';
@@ -178,13 +160,15 @@ export class AuthComponent implements OnInit, OnDestroy {
         this.router.navigateByUrl(returnUrl);
       },
       error: (err) => {
-        // Usamos setTimeout para asegurar que Angular se entera del cambio
         setTimeout(() => {
           this.cargando = false;
           console.log('Error capturado:', err);
 
           if (err.status === 401) {
             this.mensajeError = 'Email o contraseña incorrectos.';
+          } else if (err.status === 403) {
+            this.mensajeExito = 'Si el email existe, recibirás un código en tu bandeja de entrada.';
+            this.loginPwd = ''; 
           } else if (err.status === 0) {
             this.mensajeError = 'Servidor de usuarios no disponible (8081).';
           } else {
@@ -197,9 +181,6 @@ export class AuthComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ============================================================
-  // REGISTRARSE
-  // ============================================================
   registrarse() {
     if (!this.regNombre || !this.regEmail || !this.regPwd) {
       this.mensajeError = 'Por favor, rellena todos los campos.';
@@ -209,56 +190,43 @@ export class AuthComponent implements OnInit, OnDestroy {
       this.mensajeError = 'Las contraseñas no coinciden.';
       return;
     }
-    if (this.regPwd.length < 6) {
-      this.mensajeError = 'La contraseña debe tener al menos 6 caracteres.';
+    if (!this.passwordCompleta) {
+      this.mensajeError = 'La contraseña no cumple con los requisitos de seguridad.';
       return;
     }
 
     this.cargando = true;
     this.mensajeError = '';
 
+    const finalizarRegistro = () => {
+      this.cargando = false;
+      this.pantalla = 'login';
+      this.mensajeExito = `Se ha enviado un correo de confirmación a ${this.regEmail}.`;
+      
+      this.regNombre = '';
+      this.regEmail = '';
+      this.regPwd = '';
+      this.regPwdConfirm = '';
+      this.cdr.detectChanges();
+    };
+
     this.taquillaService.registerEsiusuarios(this.regEmail, this.regPwd, this.regNombre).subscribe({
       next: () => {
-        // Registro ok → hacemos login automático para no molestar al usuario
-        this.taquillaService.loginEsiusuarios(this.regEmail, this.regPwd).subscribe({
-          next: (token) => {
-            sessionStorage.setItem('esiusuarios_token', token);
-            sessionStorage.setItem('esiusuarios_email', this.regEmail);
-            this.cargando = false;
-            this.router.navigate(['/espectaculos']);
-          },
-          error: () => {
-            // Registro bien pero login falló → mandamos al login
-            this.cargando = false;
-            this.mensajeExito = '✅ Cuenta creada. Inicia sesión con tus credenciales.';
-            this.pantalla = 'login';
-          }
-        });
+        finalizarRegistro();
       },
       error: (err) => {
-        this.cargando = false;
         console.error("Error en registro:", err);
-        
-        // El backend de esiusuarios suele mandar el texto del error en err.error
-        // Si es un conflicto (409) o un error de datos (400), sacamos el mensaje
-        if (err.error && typeof err.error === 'string') {
-          this.mensajeError = err.error;
-        } else if (err.error && err.error.message) {
-          this.mensajeError = err.error.message;
-        } else if (err.status === 409) {
-          this.mensajeError = 'Este email ya está registrado. Intenta iniciar sesión.';
+        if (err.status === 0) {
+          this.cargando = false;
+          this.mensajeError = 'No se pudo contactar con el servidor. Inténtalo más tarde.';
+          this.cdr.detectChanges();
         } else {
-          this.mensajeError = 'No se pudo crear la cuenta. Revisa los datos o inténtalo más tarde.';
+          finalizarRegistro();
         }
-        
-        this.cdr.detectChanges();
       }
     });
   }
 
-  // ============================================================
-  // RECUPERAR CONTRASEÑA — Paso 1: pedir el código por email
-  // ============================================================
   pedirCodigo() {
     if (!this.recEmail) {
       this.mensajeError = 'Introduce tu email.';
@@ -271,13 +239,11 @@ export class AuthComponent implements OnInit, OnDestroy {
       next: () => {
         this.cargando = false;
         this.mensajeExito = '📧 Si el email existe, recibirás un código en tu bandeja de entrada.';
-        // Pasamos al formulario del código
         this.pantalla = 'codigoRecuperacion';
         this.cdr.detectChanges();
       },
       error: () => {
         this.cargando = false;
-        // Mostramos el mismo mensaje (no revelamos si el email existe)
         this.mensajeExito = '📧 Si el email existe, recibirás un código en tu bandeja de entrada.';
         this.pantalla = 'codigoRecuperacion';
         this.cdr.detectChanges();
@@ -285,9 +251,6 @@ export class AuthComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ============================================================
-  // RECUPERAR CONTRASEÑA — Paso 2: usar el código para cambiar contraseña
-  // ============================================================
   restablecerPassword() {
     if (!this.recCodigo || !this.recNuevaPassword || !this.recNuevaPasswordConfirm) {
       this.mensajeError = 'Por favor, rellena todos los campos.';
@@ -316,7 +279,6 @@ export class AuthComponent implements OnInit, OnDestroy {
         this.mensajeExito = '✅ Contraseña actualizada correctamente. Ya puedes iniciar sesión.';
         this.cdr.detectChanges();
         
-        // Esperamos 2 segundos para que el usuario vea el mensaje y volvemos al login
         setTimeout(() => {
           this.mostrar('login');
           this.cdr.detectChanges();
@@ -326,7 +288,6 @@ export class AuthComponent implements OnInit, OnDestroy {
         this.cargando = false;
         console.error("Error en restablecerPassword:", err);
         
-        // Intentamos sacar el mensaje de error del servidor
         if (err.error && typeof err.error === 'string') {
           this.mensajeError = err.error;
         } else {

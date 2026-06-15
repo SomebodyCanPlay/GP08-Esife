@@ -86,7 +86,7 @@
           <input [type]="mostrarRegPwd ? 'text' : 'password'"
                  [(ngModel)]="regPwd"
                  (input)="validarPassword(regPwd)"
-                 placeholder="Mínimo 6 caracteres" class="input-field input-with-eye"
+                 placeholder="Mínimo 8 caracteres" class="input-field input-with-eye"
                  [class.input-error]="regPwd && !passwordCompleta">
           <button type="button" class="btn-ojo" (click)="mostrarRegPwd = !mostrarRegPwd"
                   [title]="mostrarRegPwd ? 'Ocultar' : 'Mostrar'">
@@ -97,7 +97,7 @@
         <!-- Checklist visual — aparece cuando el usuario empieza a escribir -->
         <div class="pwd-checklist" *ngIf="regPwd">
           <span [class.req-ok]="pwdTieneMinimo" [class.req-fail]="!pwdTieneMinimo">
-            {{ pwdTieneMinimo ? '✅' : '❌' }} Mínimo 6 caracteres
+            {{ pwdTieneMinimo ? '✅' : '❌' }} Mínimo 8 caracteres
           </span>
           <span [class.req-ok]="pwdTieneMayuscula" [class.req-fail]="!pwdTieneMayuscula">
             {{ pwdTieneMayuscula ? '✅' : '❌' }} Una letra mayúscula (A-Z)
@@ -193,7 +193,7 @@
           <input [type]="mostrarRecPwd ? 'text' : 'password'"
                  [(ngModel)]="recNuevaPassword"
                  (input)="validarPassword(recNuevaPassword)"
-                 placeholder="Mínimo 6 caracteres" class="input-field input-with-eye"
+                 placeholder="Mínimo 8 caracteres" class="input-field input-with-eye"
                  [class.input-error]="recNuevaPassword && !passwordCompleta">
           <button type="button" class="btn-ojo" (click)="mostrarRecPwd = !mostrarRecPwd"
                   [title]="mostrarRecPwd ? 'Ocultar' : 'Mostrar'">
@@ -204,7 +204,7 @@
         <!-- Checklist visual — idéntica a la de registro -->
         <div class="pwd-checklist" *ngIf="recNuevaPassword">
           <span [class.req-ok]="pwdTieneMinimo" [class.req-fail]="!pwdTieneMinimo">
-            {{ pwdTieneMinimo ? '✅' : '❌' }} Mínimo 6 caracteres
+            {{ pwdTieneMinimo ? '✅' : '❌' }} Mínimo 8 caracteres
           </span>
           <span [class.req-ok]="pwdTieneMayuscula" [class.req-fail]="!pwdTieneMayuscula">
             {{ pwdTieneMayuscula ? '✅' : '❌' }} Una letra mayúscula (A-Z)

@@ -2,7 +2,8 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router'; // IMPORTANTE: Solo Router, quitamos RouterLink
+import { Router } from '@angular/router'; 
+import { environment } from '../environments/environment';
 
 export interface Espectaculo {
   id: number;
@@ -22,7 +23,7 @@ export interface Escenario {
 @Component({
   selector: 'app-espectaculos',
   standalone: true,
-  imports: [CommonModule, FormsModule], // SIN RouterLink aquí
+  imports: [CommonModule, FormsModule], 
   templateUrl: './espectaculos.html',
   styleUrls: ['./espectaculos.css']
 })
@@ -33,7 +34,6 @@ export class EspectaculosComponent implements OnInit, OnDestroy {
 
   mensajeError: string = '';
 
-  // Variables de la cola
   enCola: boolean = false;
   posicionCola: number = 0;
   sessionId: string = '';
@@ -44,7 +44,6 @@ export class EspectaculosComponent implements OnInit, OnDestroy {
   private colaTimer: any = null;
   readonly MAX_SIMULTANEOS = 3;
 
-  // Asegúrate de que el Router está inyectado aquí
   constructor(private http: HttpClient, private cdRef: ChangeDetectorRef, private router: Router) { }
 
   ngOnInit() {
@@ -74,20 +73,17 @@ export class EspectaculosComponent implements OnInit, OnDestroy {
   comprobarCola() {
     if (this.espectaculoEnColaId === null) return;
 
-    this.http.get<any>(`http://localhost:8080/cola/check?espectaculoId=${this.espectaculoEnColaId}&sessionId=${this.sessionId}`).subscribe({
+    this.http.get<any>(`${environment.apiUrl}/cola/check?espectaculoId=${this.espectaculoEnColaId}&sessionId=${this.sessionId}`).subscribe({
       next: (res) => {
         if (res.canPass) {
-          // ¡ES NUESTRO TURNO!
           this.enCola = false;
           this.mensajeError = '';
 
-          // AQUÍ ESTÁ LA MAGIA: Te redirige automáticamente sin alertas
           if (this.espectaculoEnColaId !== null) {
             this.router.navigate(['/compra', this.espectaculoEnColaId]);
           }
 
         } else {
-          // SEGUIMOS ESPERANDO
           this.enCola = true;
           this.posicionCola = res.posicion;
           this.colaTimer = setTimeout(() => this.comprobarCola(), 2000);
@@ -121,7 +117,7 @@ export class EspectaculosComponent implements OnInit, OnDestroy {
   }
 
   cargarEscenarios() {
-    this.http.get<Escenario[]>(`http://localhost:8080/busqueda/getEscenarios`).subscribe({
+    this.http.get<Escenario[]>(`${environment.apiUrl}/busqueda/getEscenarios`).subscribe({
       next: (data) => {
         this.escenarios = data.map(e => ({ ...e, expanded: false, espectaculos: [] }));
         this.cdRef.detectChanges();
@@ -137,7 +133,7 @@ export class EspectaculosComponent implements OnInit, OnDestroy {
     escenario.expanded = !escenario.expanded;
     if (escenario.expanded && (!escenario.espectaculos || escenario.espectaculos.length === 0)) {
       this.http.get<Espectaculo[]>(
-        `http://localhost:8080/busqueda/getEspectaculosPorEscenario?escenarioId=${escenario.id}&sessionId=${this.sessionId}`
+        `${environment.apiUrl}/busqueda/getEspectaculosPorEscenario?escenarioId=${escenario.id}&sessionId=${this.sessionId}`
       ).subscribe({
         next: (data) => {
           escenario.espectaculos = data;
@@ -161,7 +157,7 @@ export class EspectaculosComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const url = `http://localhost:8080/busqueda/getEspectaculos?artista=${encodeURIComponent(this.terminoBusqueda)}&sessionId=${this.sessionId}`;
+    const url = `${environment.apiUrl}/busqueda/getEspectaculos?artista=${encodeURIComponent(this.terminoBusqueda)}&sessionId=${this.sessionId}`;
     this.http.get<Espectaculo[]>(url).subscribe({
       next: (data) => {
         this.espectaculos = data;

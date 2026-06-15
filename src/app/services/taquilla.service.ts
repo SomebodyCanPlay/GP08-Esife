@@ -1,13 +1,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../environments/environment'; // Ajusta la ruta si es necesario
 
 @Injectable({
   providedIn: 'root'
 })
 export class TaquillaService {
-  private apiUrl = 'http://localhost:8080';
-  private esiusuariosUrl = 'http://localhost:8081';
+  // Usamos las variables del entorno
+  private apiUrl = environment.apiUrl;
+  private esiusuariosUrl = environment.esiusuariosUrl;
 
   constructor(private http: HttpClient) { }
 
