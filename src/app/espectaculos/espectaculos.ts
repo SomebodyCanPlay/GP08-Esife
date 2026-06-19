@@ -49,21 +49,43 @@ export class EspectaculosComponent implements OnInit, OnDestroy {
   ngOnInit() {
     if (typeof window !== 'undefined' && window.sessionStorage) {
       this.sessionId = sessionStorage.getItem('taquilla_sessionId') || '';
+      
       if (!this.sessionId) {
-        this.sessionId = Math.random().toString(36).substring(2, 15);
-        sessionStorage.setItem('taquilla_sessionId', this.sessionId);
+        // 1.  Le pedimos el ID al Backend
+        this.http.get<any>(`${environment.apiUrl}/cola/init-session`).subscribe({
+          next: (res) => {
+            // 2. Guardamos el ID seguro que nos da Spring Boot
+            this.sessionId = res.sessionId;
+            sessionStorage.setItem('taquilla_sessionId', this.sessionId);
+            
+            // 3. Ya podemos cargar los escenarios con nuestra identidad real
+            this.cargarEscenarios();
+          },
+          error: (err) => {
+            console.error("Error contactando con el servidor para la sesión:", err);
+            // Plan de contingencia por si el backend está caído
+            this.sessionId = Math.random().toString(36).substring(2, 15);
+            sessionStorage.setItem('taquilla_sessionId', this.sessionId);
+            this.cargarEscenarios();
+          }
+        });
+      } else {
+        // El usuario ya tenía sesión (ej. le dio a F5), cargamos directamente
+        this.cargarEscenarios();
       }
+    } else {
+      this.cargarEscenarios();
     }
-    this.cargarEscenarios();
   }
 
   ngOnDestroy() {
+    // Si el usuario se va de la página mientras estaba en la cola, limpiamos el temporizador
     if (this.colaTimer) {
       clearTimeout(this.colaTimer);
-      this.colaTimer = null;
     }
   }
 
+  // es el botón de "Ver entradas"
   entrarColaEspectaculo(espectaculoId: number) {
     this.espectaculoEnColaId = espectaculoId;
     this.enCola = true;
@@ -110,6 +132,7 @@ export class EspectaculosComponent implements OnInit, OnDestroy {
     return `~${minutos} min`;
   }
 
+  //es el botón de "Ver conciertos" el que llama a esta función
   verConciertos() {
     this.mostrarEscenarios = true;
     this.cargarEscenarios();
@@ -129,11 +152,12 @@ export class EspectaculosComponent implements OnInit, OnDestroy {
     });
   }
 
+  //es el boton que expande los conciertos de un escenario, y si no hay conciertos cargados, los carga
   toggleEscenario(escenario: Escenario) {
     escenario.expanded = !escenario.expanded;
     if (escenario.expanded && (!escenario.espectaculos || escenario.espectaculos.length === 0)) {
       this.http.get<Espectaculo[]>(
-        `${environment.apiUrl}/busqueda/getEspectaculosPorEscenario?escenarioId=${escenario.id}&sessionId=${this.sessionId}`
+        `${environment.apiUrl}/busqueda/getEspectaculosPorEscenario?escenarioId=${escenario.id}`
       ).subscribe({
         next: (data) => {
           escenario.espectaculos = data;
@@ -157,7 +181,7 @@ export class EspectaculosComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const url = `${environment.apiUrl}/busqueda/getEspectaculos?artista=${encodeURIComponent(this.terminoBusqueda)}&sessionId=${this.sessionId}`;
+    const url = `${environment.apiUrl}/busqueda/getEspectaculos?artista=${encodeURIComponent(this.terminoBusqueda)}`;
     this.http.get<Espectaculo[]>(url).subscribe({
       next: (data) => {
         this.espectaculos = data;
