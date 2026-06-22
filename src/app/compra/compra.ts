@@ -312,7 +312,7 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
         // Si usó el saldo, se lo restamos en el backend de usuarios
         if (this.usarSaldo && this.saldoAAplicarEuros > 0) {
           const email = sessionStorage.getItem('esiusuarios_email');
-          this.http.post(`${environment.esiusuariosUrl}/users/restarSaldo`, {
+          this.http.post(`${environment.esiusuariosUrl}/restarSaldo`, {
             email: email,
             cantidad: this.saldoAAplicarEuros
           }).subscribe({
