@@ -8,7 +8,6 @@
     {{ mensajeError }}
   </div>
 
-  <!-- Resumen de disponibilidad (Solo visible si NO estamos pagando) -->
   <div class="resumen-box" *ngIf="resumen && !mostrarFormularioPago && !compraCompletada">
     <h3>Resumen de Disponibilidad</h3>
     <div class="stats">
@@ -19,17 +18,13 @@
     </div>
   </div>
 
-  <!-- MODO 1: Selección de Entradas y Resumen -->
   <div class="compra-layout" *ngIf="!mostrarFormularioPago && !compraCompletada">
-    <!-- Columna Izquierda: Listado de Entradas -->
     <div class="entradas-grid">
-      <!-- Cargando -->
       <div *ngIf="entradas.length === 0 && !mensajeError" class="loading-state">
         <div class="spinner-small"></div>
         <p>Buscando entradas disponibles...</p>
       </div>
 
-      <!-- Listado -->
       <div class="entrada-card" *ngFor="let ent of entradas" [ngClass]="{'seleccionada': estaSeleccionada(ent.id)}">
         <div class="card-content">
           <div *ngIf="ent.tipo === 'Precisa' || ent.tipo === 'precisa'">
@@ -60,7 +55,6 @@
       </div>
     </div>
 
-    <!-- Columna Derecha: Carrito -->
     <div class="checkout-box">
       <div *ngIf="entradasSeleccionadas.length === 0">
         <h3>🛒 Tu Carrito</h3>
@@ -80,9 +74,16 @@
             <button class="btn-close-cart" (click)="cancelarSeleccion(sel)">❌</button>
           </div>
 
+          <div *ngIf="saldoDisponibleEuros > 0" style="margin-top: 15px; border-top: 1px dashed #30363d; padding-top: 10px;">
+            <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" [(ngModel)]="usarSaldo" (change)="cdRef.detectChanges()">
+              <span>Usar monedero (Saldo: {{ saldoDisponibleEuros | number:'1.2-2' }} €)</span>
+            </label>
+          </div>
+
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
             <span>Total:</span>
-            <div class="total-price">{{ precioTotal / 100 | currency:'EUR':'symbol' }}</div>
+            <div class="total-price">{{ totalFinalEuros | currency:'EUR':'symbol' }}</div>
           </div>
         </div>
 
@@ -98,11 +99,9 @@
     </div>
   </div>
 
-  <!-- MODO 2: Formulario de Pago Centrado -->
   <div class="pago-central-container" *ngIf="(mostrarFormularioPago || compraCompletada) && !compraCompletadaError">
     <div class="card-form payment-focused">
       
-      <!-- Éxito: Se muestra aquí mismo cuando se confirma -->
       <div *ngIf="compraCompletada" class="success-box">
         <div class="success-icon">✓</div>
         <h3>¡Compra confirmada!</h3>
@@ -110,12 +109,11 @@
         <button class="btn-success-main" (click)="volverAEspectaculos()">Volver a Escenarios</button>
       </div>
 
-      <!-- Formulario: Solo se muestra si NO está completada -->
       <ng-container *ngIf="!compraCompletada">
         <div class="card-form-header">
           <span class="card-logo">💳</span>
           <span class="card-title">Finalizar Compra</span>
-          <span class="card-total">{{ precioTotal / 100 | currency:'EUR':'symbol' }}</span>
+          <span class="card-total">{{ totalFinalEuros | currency:'EUR':'symbol' }}</span>
         </div>
 
         <div class="card-error" *ngIf="errorTarjeta">⚠ {{ errorTarjeta }}</div>
@@ -143,7 +141,7 @@
         </div>
 
         <button class="btn-pagar" (click)="procesarPago()" [disabled]="procesandoPago">
-          <span *ngIf="!procesandoPago">🔒 Pagar {{ precioTotal / 100 | currency:'EUR':'symbol' }}</span>
+          <span *ngIf="!procesandoPago">🔒 Pagar {{ totalFinalEuros | currency:'EUR':'symbol' }}</span>
           <span *ngIf="procesandoPago" class="spinner-small"></span>
         </button>
 

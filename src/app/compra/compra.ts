@@ -54,13 +54,17 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
   procesandoPago: boolean = false;
   compraCompletadaError: boolean = false; 
 
+  // Variables para el monedero
+  saldoDisponibleEuros: number = 0;
+  usarSaldo: boolean = false;
+
   private keepAliveTimer: any = null;
 
   constructor(
     private http: HttpClient,
     private route: ActivatedRoute,
     private router: Router,
-    private cdRef: ChangeDetectorRef,
+    public cdRef: ChangeDetectorRef,
     private taquillaService: TaquillaService
   ) { }
 
@@ -95,12 +99,33 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
       } else {
         console.log("COMPRA: Iniciando carga inicial en ngOnInit...", {id: this.espectaculoId, session: this.sessionId});
         this.cargarDatos();
+
+        // Cargar saldo si el usuario está logueado
+        if (this.userToken) {
+          this.taquillaService.obtenerSaldoMonedero(this.userToken).subscribe({
+            next: (saldo) => {
+              this.saldoDisponibleEuros = saldo;
+              this.cdRef.detectChanges();
+            },
+            error: (err) => console.error("Error al cargar monedero", err)
+          });
+        }
       }
     }
   }
 
   get precioTotal(): number {
     return this.entradasSeleccionadas.reduce((sum, ent) => sum + ent.precio, 0);
+  }
+
+  // Cálculos del monedero
+  get saldoAAplicarEuros(): number {
+    if (!this.usarSaldo) return 0;
+    return Math.min(this.saldoDisponibleEuros, this.precioTotal / 100);
+  }
+
+  get totalFinalEuros(): number {
+    return (this.precioTotal / 100) - this.saldoAAplicarEuros;
   }
 
   ngAfterViewInit(): void {
@@ -284,6 +309,18 @@ export class CompraComponent implements OnInit, AfterViewInit, OnDestroy {
     this.procesandoPago = true;
     this.taquillaService.confirmarCompra(this.sessionId, this.userToken).subscribe({
       next: (res) => {
+        // Si usó el saldo, se lo restamos en el backend de usuarios
+        if (this.usarSaldo && this.saldoAAplicarEuros > 0) {
+          const email = sessionStorage.getItem('esiusuarios_email');
+          this.http.post(`${environment.esiusuariosUrl}/users/restarSaldo`, {
+            email: email,
+            cantidad: this.saldoAAplicarEuros
+          }).subscribe({
+            next: () => console.log('Monedero descontado'),
+            error: (err) => console.error('Error al descontar monedero', err)
+          });
+        }
+
         this.compraCompletada = true;
         this.mostrarFormularioPago = false;
         this.compraCompletadaError = false;

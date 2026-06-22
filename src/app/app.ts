@@ -14,17 +14,16 @@ import { FormsModule } from '@angular/forms';
 })
 export class App implements OnInit {
 
-  // Variables para el formulario de baja
   mostrarFormBaja: boolean = false;
   passConfirmacion: string = '';
-  mostrarPwdBaja: boolean = false; // "Ojo" para la contraseña de baja
+  mostrarPwdBaja: boolean = false; 
 
-
-  // ¿Está el usuario logeado? Lo sabemos mirando el sessionStorage
   estaLogeado: boolean = false;
   emailUsuario: string = '';
 
-  // Ocultamos la navbar en la pantalla de auth para que no quede raro
+  // NUEVO: Variable para guardar los euros
+  saldoMonedero: number = 0;
+
   mostrarNavbar: boolean = true;
 
   constructor(
@@ -35,12 +34,10 @@ export class App implements OnInit {
   ngOnInit() {
     this.actualizarEstadoLogin();
 
-    // Cada vez que el usuario navega a otra página, actualizamos el estado
     this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
       .subscribe((e: any) => {
         this.actualizarEstadoLogin();
-        // En la página de auth no mostramos la navbar (ya tiene su propio diseño)
         this.mostrarNavbar = !e.urlAfterRedirects.startsWith('/auth');
       });
   }
@@ -51,10 +48,21 @@ export class App implements OnInit {
       const email = sessionStorage.getItem('esiusuarios_email');
       this.estaLogeado = !!token;
       this.emailUsuario = email || '';
+
+      // NUEVO: Si está logueado, pedimos el saldo
+      if (this.estaLogeado && token) {
+        this.taquillaService.obtenerSaldoMonedero(token).subscribe({
+          next: (saldo) => {
+            this.saldoMonedero = saldo;
+          },
+          error: (err) => console.error('Error al obtener el saldo', err)
+        });
+      } else {
+        this.saldoMonedero = 0;
+      }
     }
   }
 
-  // Nombre corto para mostrar en la navbar (solo la parte antes del @)
   get nombreCorto(): string {
     return this.emailUsuario.split('@')[0] || 'Usuario';
   }
@@ -64,7 +72,6 @@ export class App implements OnInit {
   }
 
   irAlRegistro() {
-    // Guardamos en sessionStorage que queremos abrir el formulario de registro
     sessionStorage.setItem('auth_pantalla', 'registro');
     this.router.navigate(['/auth']);
   }
@@ -72,22 +79,20 @@ export class App implements OnInit {
   cerrarSesion() {
     const token = sessionStorage.getItem('esiusuarios_token');
     if (token) {
-      // Avisamos al backend para que invalide el token en la BD
       this.taquillaService.logoutEsiusuarios(token).subscribe({
         next: () => console.log('Sesión cerrada en el servidor'),
         error: (err) => console.error('Error cerrando sesión en servidor', err)
       });
     }
 
-    // Limpiamos el navegador
     sessionStorage.removeItem('esiusuarios_token');
     sessionStorage.removeItem('esiusuarios_email');
     this.estaLogeado = false;
     this.emailUsuario = '';
+    this.saldoMonedero = 0; // NUEVO: Reseteamos el dinero
     this.router.navigate(['/']);
   }
 
-  // Nueva función para dar de baja al usuario
   ejecutarBaja() {
     if (!this.passConfirmacion) {
       alert('Debes introducir la contraseña para confirmar la baja.');

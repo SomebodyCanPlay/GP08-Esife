@@ -238,13 +238,13 @@ export class AuthComponent implements OnInit, OnDestroy {
     this.taquillaService.recuperarPassword(this.recEmail).subscribe({
       next: () => {
         this.cargando = false;
-        this.mensajeExito = '📧 Si el email existe, recibirás un código en tu bandeja de entrada.';
+        this.mensajeExito = 'Si el email existe, recibirás un código en tu bandeja de entrada.';
         this.pantalla = 'codigoRecuperacion';
         this.cdr.detectChanges();
       },
       error: () => {
         this.cargando = false;
-        this.mensajeExito = '📧 Si el email existe, recibirás un código en tu bandeja de entrada.';
+        this.mensajeExito = 'Si el email existe, recibirás un código en tu bandeja de entrada.';
         this.pantalla = 'codigoRecuperacion';
         this.cdr.detectChanges();
       }
